@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-blue: #0ea5e9;
+  --color-brand-blue-hover: #0284c7;
+  --color-brand-navy: #0f172a;
+  --color-brand-gray: #f8fafc;
+  
+  --font-sans: var(--font-inter), sans-serif;
+  --font-serif: var(--font-merriweather), serif;
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+}
+
+/* Custom Dotted Timeline Line for Client Form */
+.timeline-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 20px;
+  border-left: 2px dashed #e2e8f0;
+  z-index: 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Signature Drawing Canvas Box */
+.signature-canvas-container {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  position: relative;
+  touch-action: none;
+}
+
+/* Soft pulse for interactive file uploaders */
+.uploader-box {
+  transition: all 0.2s ease-in-out;
+}
+.uploader-box:hover {
+  border-color: #0ea5e9;
+  background-color: #f0f9ff;
+}
+
+/* Red Accent Banner */
+.accent-banner {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Wavy SVG visual layout at top of client form */
+.top-wave-bg {
+  background: linear-gradient(180deg, #f1f5f9 0%, #ffffff 100%);
+  clip-path: ellipse(80% 50% at 50% 0%);
+}
