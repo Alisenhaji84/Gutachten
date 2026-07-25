@@ -1027,7 +1027,7 @@ export default function ClientPortalPage() {
 
         {/* Portal Footer */}
         <div className="bg-slate-50 py-6 px-12 text-center border-t border-slate-100 text-[10px] text-slate-400 font-medium">
-          KFZ-Gutachten Schadenmeldung • Powered by Aidaform
+          KFZ Gutachter Ludwigsburg • © 2026 Powered by INGENIEURBÜRO
         </div>
       </div>
     </div>
