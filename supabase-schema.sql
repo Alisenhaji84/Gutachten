@@ -118,3 +118,21 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 7. Storage Bucket & Policy Configuration
+-- Create storage schema table inserts if missing (creates 'case-files' bucket automatically)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('case-files', 'case-files', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Grant public permission to upload (INSERT) files to 'case-files' storage bucket
+DROP POLICY IF EXISTS "Allow public uploads to case-files" ON storage.objects;
+CREATE POLICY "Allow public uploads to case-files" ON storage.objects
+  FOR INSERT TO public
+  WITH CHECK (bucket_id = 'case-files');
+
+-- Grant public permission to view/retrieve (SELECT) files from 'case-files' storage bucket
+DROP POLICY IF EXISTS "Allow public reads from case-files" ON storage.objects;
+CREATE POLICY "Allow public reads from case-files" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'case-files');

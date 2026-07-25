@@ -142,9 +142,9 @@ export default function CaseDetailPage() {
         // Show success alert
         setSuccessMsg(`Datei "${file.name}" erfolgreich hochgeladen!`);
         setTimeout(() => setSuccessMsg(""), 3000);
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setErrorMsg("Upload fehlgeschlagen.");
+        setErrorMsg("Upload fehlgeschlagen: " + (err.message || err));
       } finally {
         setUploadLoading(false);
       }

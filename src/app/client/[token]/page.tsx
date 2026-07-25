@@ -310,9 +310,9 @@ export default function ClientPortalPage() {
 
       setSubmitted(true);
       fetchCaseByToken(); // Reload to show status & existing files
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Übermitteln des Formulars.");
+      alert(`Fehler beim Übermitteln des Formulars: ${err.message || err}`);
     }
   };
 
@@ -344,9 +344,9 @@ export default function ClientPortalPage() {
       // Refresh files list
       const filesList = await getFilesForCase(caseData.id);
       setExistingFiles(filesList);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setRevisitFileMsg("Fehler beim Upload.");
+      setRevisitFileMsg(`Fehler beim Upload: ${err.message || err}`);
     } finally {
       setRevisitUploadLoading(false);
     }
