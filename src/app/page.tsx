@@ -14,8 +14,8 @@ export default function Home() {
 
       <div className="max-w-2xl text-center space-y-8 z-10">
         {/* Logo */}
-        <div className="inline-flex w-20 h-20 bg-sky-500 rounded-3xl items-center justify-center text-slate-950 shadow-xl shadow-sky-500/10 mb-2 transform hover:rotate-6 transition-transform">
-          <Car className="w-11 h-11 stroke-[2]" />
+        <div className="inline-flex w-20 h-20 bg-slate-800 border border-slate-700/60 rounded-3xl items-center justify-center shadow-xl mb-2 overflow-hidden transform hover:rotate-6 transition-transform">
+          <img src="/Logo.webp" alt="Logo" className="w-full h-full object-cover" />
         </div>
 
         {/* Title */}

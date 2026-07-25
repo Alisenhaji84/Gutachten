@@ -50,10 +50,8 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md z-10">
         {/* Logo Container */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-sky-500 rounded-2xl flex items-center justify-center shadow-lg shadow-sky-500/20 mb-4 transform hover:rotate-6 transition-transform duration-300">
-            <svg className="w-9 h-9 text-slate-900 stroke-[2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.5-1.619Z" />
-            </svg>
+          <div className="w-16 h-16 bg-slate-800 border border-slate-700/60 rounded-2xl flex items-center justify-center shadow-lg mb-4 overflow-hidden transform hover:rotate-6 transition-transform duration-300">
+            <img src="/Logo.webp" alt="Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
             KFZ-Gutachten Portal

@@ -191,8 +191,8 @@ export default function DashboardPage() {
       <header className="sticky top-0 z-30 bg-slate-900 text-slate-100 border-b border-slate-800 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center text-slate-950 font-bold">
-              KFZ
+            <div className="w-10 h-10 bg-slate-800 border border-slate-700/60 rounded-xl flex items-center justify-center overflow-hidden">
+              <img src="/Logo.webp" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-bold leading-tight">KFZ-Gutachten</h1>
