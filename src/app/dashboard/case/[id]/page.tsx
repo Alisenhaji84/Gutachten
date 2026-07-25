@@ -58,6 +58,7 @@ export default function CaseDetailPage() {
 
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedLocation, setCopiedLocation] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const handleCopyEmail = () => {
     if (caseData?.client_email) {
@@ -434,46 +435,6 @@ export default function CaseDetailPage() {
               </div>
             )}
           </section>
-
-          {/* Uploaded Documents Grid */}
-          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-4">
-              <FileCheck className="w-5 h-5 text-sky-500" />
-              <span>Hochgeladene Dateien ({files.length})</span>
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              
-              {/* Scheckheft uploads */}
-              <FileCategoryCard 
-                title="Scheckheft" 
-                files={scheckheftFiles} 
-                icon={<FileText className="w-5 h-5 text-sky-600" />} 
-              />
-
-              {/* Unfallkarte uploads */}
-              <FileCategoryCard 
-                title="Unfallkarte" 
-                files={accidentCardFiles} 
-                icon={<FileText className="w-5 h-5 text-sky-600" />} 
-              />
-
-              {/* Photos uploads */}
-              <FileCategoryCard 
-                title="Fotos vom Unfallort" 
-                files={photoFiles} 
-                icon={<ImageIcon className="w-5 h-5 text-sky-600" />} 
-              />
-
-              {/* Additional files */}
-              <FileCategoryCard 
-                title="Sonstige Dokumente (Intern)" 
-                files={additionalFiles} 
-                icon={<FileText className="w-5 h-5 text-sky-600" />} 
-              />
-
-            </div>
-          </section>
         </div>
 
         {/* Right 1 Column: Case Controls & File Uploading */}
@@ -604,20 +565,122 @@ export default function CaseDetailPage() {
           )}
 
         </div>
+
+        {/* Uploaded Documents Grid (Full Width) */}
+        <section className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-4">
+            <FileCheck className="w-5 h-5 text-sky-500" />
+            <span>Hochgeladene Dateien ({files.length})</span>
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Scheckheft uploads */}
+            <FileCategoryCard 
+              title="Scheckheft" 
+              files={scheckheftFiles} 
+              icon={<FileText className="w-5 h-5 text-sky-600" />} 
+              onPreviewImage={setPreviewImage}
+            />
+
+            {/* Unfallkarte uploads */}
+            <FileCategoryCard 
+              title="Unfallkarte" 
+              files={accidentCardFiles} 
+              icon={<FileText className="w-5 h-5 text-sky-600" />} 
+              onPreviewImage={setPreviewImage}
+            />
+
+            {/* Photos uploads */}
+            <FileCategoryCard 
+              title="Fotos vom Unfallort" 
+              files={photoFiles} 
+              icon={<ImageIcon className="w-5 h-5 text-sky-600" />} 
+              onPreviewImage={setPreviewImage}
+            />
+
+            {/* Additional files */}
+            <FileCategoryCard 
+              title="Sonstige Dokumente (Intern)" 
+              files={additionalFiles} 
+              icon={<FileText className="w-5 h-5 text-sky-600" />} 
+              onPreviewImage={setPreviewImage}
+            />
+
+          </div>
+        </section>
+
       </main>
+
+      {/* Image Preview Lightbox Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div 
+            className="relative max-w-4xl w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/20">
+              <span className="text-sm font-semibold text-slate-300">Bildvorschau</span>
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer text-lg font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            {/* Image Container */}
+            <div className="p-6 flex items-center justify-center bg-slate-950 overflow-auto min-h-[300px] max-h-[70vh]">
+              <img
+                src={previewImage}
+                alt="Vorschau"
+                className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg border border-slate-800"
+              />
+            </div>
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-4 border-t border-slate-800 bg-slate-950/20">
+              <a
+                href={previewImage}
+                download
+                className="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                Herunterladen
+              </a>
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Helper to check if file is an image
+const isImageFile = (fileName: string): boolean => {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext || '');
+};
 
 // File category sub-card component
 function FileCategoryCard({ 
   title, 
   files, 
-  icon 
+  icon,
+  onPreviewImage
 }: { 
   title: string; 
   files: CaseFile[]; 
   icon: React.ReactNode;
+  onPreviewImage: (url: string) => void;
 }) {
   return (
     <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
@@ -635,22 +698,44 @@ function FileCategoryCard({
               key={f.id} 
               className="flex items-center justify-between bg-white border border-slate-100 rounded-lg p-2 text-xs shadow-inner"
             >
-              <div className="flex-1 min-w-0 mr-2">
-                <p className="font-medium text-slate-700 truncate font-mono">{f.file_name}</p>
-                <p className="text-[9px] text-slate-400 mt-0.5">
-                  Von: {f.uploaded_by === "client" ? "Kunde" : f.uploaded_by === "admin" ? "Admin" : "Mitarbeiter"} 
-                  {" • "} 
-                  {new Date(f.created_at).toLocaleDateString("de-DE")}
-                </p>
+              <div className="flex items-center flex-1 min-w-0 mr-2">
+                {isImageFile(f.file_name) && (
+                  <div 
+                    onClick={() => onPreviewImage(f.file_url)}
+                    className="w-12 h-12 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 mr-2.5 cursor-pointer hover:opacity-90 hover:border-sky-400 transition-all select-none"
+                    title="Vorschau anzeigen"
+                  >
+                    <img src={f.file_url} alt="Miniaturansicht" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-slate-700 truncate font-mono">{f.file_name}</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">
+                    Von: {f.uploaded_by === "client" ? "Kunde" : f.uploaded_by === "admin" ? "Admin" : "Mitarbeiter"} 
+                    {" • "} 
+                    {new Date(f.created_at).toLocaleDateString("de-DE")}
+                  </p>
+                </div>
               </div>
-              <a 
-                href={f.file_url} 
-                download={f.file_name} 
-                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-600 cursor-pointer shrink-0"
-                title="Herunterladen"
-              >
-                <Download className="w-3.5 h-3.5" />
-              </a>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {isImageFile(f.file_name) && (
+                  <button
+                    onClick={() => onPreviewImage(f.file_url)}
+                    className="p-1.5 bg-slate-100 hover:bg-slate-200 hover:text-sky-600 rounded-md transition-colors text-slate-500 cursor-pointer select-none"
+                    title="Vorschau"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <a 
+                  href={f.file_url} 
+                  download={f.file_name} 
+                  className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-650 cursor-pointer select-none"
+                  title="Herunterladen"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </li>
           ))}
         </ul>
