@@ -65,34 +65,42 @@ ALTER TABLE public.case_files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 -- 5. Row Level Security Policies
--- Profiles: Users can view all profiles, but only updates are managed.
+
+-- Profiles policies
+DROP POLICY IF EXISTS "Allow public select on profiles" ON public.profiles;
 CREATE POLICY "Allow public select on profiles" ON public.profiles
   FOR SELECT USING (true);
 
--- Cases: Admins can do anything. Assistants can view/modify cases assigned to them. Clients can view/modify using client_token.
+-- Cases policies
+DROP POLICY IF EXISTS "Allow full admin control on cases" ON public.cases;
 CREATE POLICY "Allow full admin control on cases" ON public.cases
   FOR ALL USING (
     (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
   );
 
+DROP POLICY IF EXISTS "Allow assistant select/update on assigned cases" ON public.cases;
 CREATE POLICY "Allow assistant select/update on assigned cases" ON public.cases
   FOR SELECT USING (assistant_id = auth.uid());
 
+DROP POLICY IF EXISTS "Allow client token select on cases" ON public.cases;
 CREATE POLICY "Allow client token select on cases" ON public.cases
-  FOR SELECT USING (true); -- Clients find their cases via client_token search
+  FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Allow client token update on cases" ON public.cases;
 CREATE POLICY "Allow client token update on cases" ON public.cases
-  FOR UPDATE USING (true); -- Clients can fill forms via client_token matching
+  FOR UPDATE USING (true);
 
--- Case Files: Viewable by everyone. Insertable by authed users or anonymous clients.
+-- Case Files policies
+DROP POLICY IF EXISTS "Allow public select on case files" ON public.case_files;
 CREATE POLICY "Allow public select on case files" ON public.case_files
   FOR SELECT USING (true);
 
--- Case Files insert
+DROP POLICY IF EXISTS "Allow insert on case files" ON public.case_files;
 CREATE POLICY "Allow insert on case files" ON public.case_files
   FOR INSERT WITH CHECK (true);
 
--- Notifications: Admin-only access.
+-- Notifications policies
+DROP POLICY IF EXISTS "Allow admin full control on notifications" ON public.notifications;
 CREATE POLICY "Allow admin full control on notifications" ON public.notifications
   FOR ALL USING (
     (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
