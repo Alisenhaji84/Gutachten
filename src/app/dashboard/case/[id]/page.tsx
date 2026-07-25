@@ -30,7 +30,8 @@ import {
   User as UserIcon,
   ChevronRight,
   Send,
-  Eye
+  Eye,
+  Copy
 } from "lucide-react";
 
 export default function CaseDetailPage() {
@@ -54,6 +55,25 @@ export default function CaseDetailPage() {
   const [uploadType, setUploadType] = useState<CaseFile["file_type"]>("additional");
   const [uploadLoading, setUploadLoading] = useState(false);
   const [fileName, setFileName] = useState("");
+
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedLocation, setCopiedLocation] = useState(false);
+
+  const handleCopyEmail = () => {
+    if (caseData?.client_email) {
+      navigator.clipboard.writeText(caseData.client_email);
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 2000);
+    }
+  };
+
+  const handleCopyLocation = () => {
+    if (caseData?.accident_location) {
+      navigator.clipboard.writeText(caseData.accident_location);
+      setCopiedLocation(true);
+      setTimeout(() => setCopiedLocation(false), 2000);
+    }
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem("kfz_current_user");
@@ -275,10 +295,25 @@ export default function CaseDetailPage() {
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Kundenkontakt</h3>
                   <div className="space-y-2 text-sm text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <p className="flex justify-between">
+                    <div className="flex justify-between items-center py-1">
                       <span className="text-slate-400">E-Mail:</span>
-                      <span className="font-semibold">{caseData.client_email || "-"}</span>
-                    </p>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-800 break-all">{caseData.client_email || "-"}</span>
+                        {caseData.client_email && (
+                          <button
+                            onClick={handleCopyEmail}
+                            className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-700 transition-colors cursor-pointer select-none"
+                            title="E-Mail kopieren"
+                          >
+                            {copiedEmail ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <div className="flex justify-between items-center py-1.5">
                       <span className="text-slate-400">Telefon:</span>
                       <div className="flex items-center gap-2">
@@ -314,10 +349,27 @@ export default function CaseDetailPage() {
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Unfalldetails</h3>
                   <div className="space-y-2 text-sm text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <p className="flex justify-between">
+                    <div className="flex flex-col gap-1.5 py-1">
                       <span className="text-slate-400 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Ort:</span>
-                      <span className="font-semibold truncate max-w-[180px]">{caseData.accident_location || "-"}</span>
-                    </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="font-semibold text-slate-850 break-words leading-relaxed text-left max-w-[90%]">
+                          {caseData.accident_location || "-"}
+                        </span>
+                        {caseData.accident_location && (
+                          <button
+                            onClick={handleCopyLocation}
+                            className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-700 transition-colors cursor-pointer select-none mt-0.5"
+                            title="Ort kopieren"
+                          >
+                            {copiedLocation ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <p className="flex justify-between">
                       <span className="text-slate-400 flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Datum:</span>
                       <span className="font-semibold">
