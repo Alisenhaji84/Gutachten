@@ -384,9 +384,9 @@ export default function ClientPortalPage() {
           UNFALL GEHABT? WIR HELFEN SOFORT!
         </div>
         
-        {/* Car graphic placeholder */}
-        <div className="w-24 h-24 bg-slate-800 rounded-full border border-slate-700/80 flex items-center justify-center text-sky-500 mb-2">
-          <Car className="w-12 h-12" />
+        {/* Logo */}
+        <div className="h-20 flex items-center justify-center mb-2 select-none">
+          <img src="/Logo.webp" alt="Logo" className="max-h-full w-auto object-contain" />
         </div>
         
         <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wider font-serif">
