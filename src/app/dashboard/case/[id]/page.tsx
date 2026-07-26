@@ -243,14 +243,9 @@ export default function CaseDetailPage() {
             <div className="scale-75 origin-center">
               <LicensePlate plateNumber={caseData.license_plate} />
             </div>
-            <span className="text-[10px] text-slate-400 hidden sm:inline">(Internes Aktenzeichen)</span>
           </div>
 
-          <div className="text-right text-xs text-slate-400 font-semibold text-slate-300">
-            Zuständig: {caseData.assistant_id === "admin-id-1" || !caseData.assistant_id
-              ? "Ali Senhaji"
-              : (assistants.find(a => a.id === caseData.assistant_id)?.name || "Mitarbeiter")}
-          </div>
+          <div />
         </div>
       </header>
 
