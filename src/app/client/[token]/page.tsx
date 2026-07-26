@@ -45,6 +45,8 @@ export default function ClientPortalPage() {
   const [damageNumber, setDamageNumber] = useState("");
   const [opponentInsuranceName, setOpponentInsuranceName] = useState("");
   const [opponentInsuranceNumber, setOpponentInsuranceNumber] = useState("");
+  const [iban, setIban] = useState("");
+  const [opposingInsuranceContacted, setOpposingInsuranceContacted] = useState<boolean>(false);
   
   // Scheckheft choice & files
   const [scheckheftChoice, setScheckheftChoice] = useState("Ja");
@@ -91,6 +93,8 @@ export default function ClientPortalPage() {
           setDamageNumber(data.damage_number || "");
           setOpponentInsuranceName(data.opponent_insurance_name || "");
           setOpponentInsuranceNumber(data.opponent_insurance_number || "");
+          setIban(data.iban || "");
+          setOpposingInsuranceContacted(!!data.opposing_insurance_contacted);
           
           if (data.is_scheckheft_maintained) {
             if (["Ja", "Nein"].includes(data.is_scheckheft_maintained)) {
@@ -304,6 +308,8 @@ export default function ClientPortalPage() {
         is_scheckheft_maintained: scheckheftText,
         is_accident_card_present: unfallkarteText,
         signature_url: signatureUrl,
+        iban: iban,
+        opposing_insurance_contacted: opposingInsuranceContacted,
       });
 
       // Upload files
@@ -735,6 +741,57 @@ export default function ClientPortalPage() {
                     onChange={(e) => setOpponentInsuranceNumber(e.target.value)}
                     className="w-full border-b border-slate-200 focus:border-sky-500 py-2 outline-none text-slate-800 transition-colors placeholder:text-slate-300"
                   />
+                </div>
+              </div>
+
+              {/* Step 9b: IBAN */}
+              <div className="relative pl-0 sm:pl-14">
+                <TimelineStepIcon icon={<FileText className="w-4 h-4 text-slate-500" />} />
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-slate-800">
+                    IBAN für die Auszahlung (falls vorhanden)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="DE12 3456 7890 ..."
+                    value={iban}
+                    onChange={(e) => setIban(e.target.value)}
+                    className="w-full border-b border-slate-200 focus:border-sky-500 py-2 outline-none text-slate-800 transition-colors placeholder:text-slate-300"
+                  />
+                </div>
+              </div>
+
+              {/* Step 9c: Opposing Insurance Contacted */}
+              <div className="relative pl-0 sm:pl-14">
+                <TimelineStepIcon icon={<ShieldCheck className="w-4 h-4 text-slate-500" />} />
+                <div className="space-y-3">
+                  <label className="block text-sm font-bold text-slate-800 leading-snug">
+                    Hat die Versicherung der Gegenseite Sie kontaktiert?
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setOpposingInsuranceContacted(true)}
+                      className={`py-3 px-4 border rounded-xl font-semibold text-sm transition-all text-center cursor-pointer ${
+                        opposingInsuranceContacted === true
+                          ? "bg-slate-900 border-slate-900 text-white"
+                          : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      Ja
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOpposingInsuranceContacted(false)}
+                      className={`py-3 px-4 border rounded-xl font-semibold text-sm transition-all text-center cursor-pointer ${
+                        opposingInsuranceContacted === false
+                          ? "bg-slate-900 border-slate-900 text-white"
+                          : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      Nein
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -40,6 +40,8 @@ export interface Case {
   is_scheckheft_maintained?: string;
   is_accident_card_present?: string;
   assistant_payout?: number;
+  iban?: string;
+  opposing_insurance_contacted?: boolean;
 }
 
 export interface CaseFile {

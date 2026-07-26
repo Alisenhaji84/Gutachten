@@ -442,6 +442,16 @@ export default function CaseDetailPage() {
                     <span className="text-xs font-semibold text-slate-400 block mb-1">Unfallkarte vorhanden?</span>
                     <span className="font-semibold text-slate-700">{caseData.is_accident_card_present || "-"}</span>
                   </div>
+                  <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                    <span className="text-xs font-semibold text-slate-400 block mb-1">IBAN für Auszahlung</span>
+                    <span className="font-semibold text-slate-700 font-mono break-all">{caseData.iban || "Nicht angegeben"}</span>
+                  </div>
+                  <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                    <span className="text-xs font-semibold text-slate-400 block mb-1">Gegnerische Versicherung kontaktiert?</span>
+                    <span className={`font-semibold ${caseData.opposing_insurance_contacted ? "text-amber-600 font-bold" : "text-slate-700"}`}>
+                      {caseData.opposing_insurance_contacted ? "Ja" : "Nein"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Client Signature Canvas Render */}
