@@ -31,9 +31,9 @@ export default function LicensePlate({ plateNumber }: LicensePlateProps) {
       const rest = parts.slice(1).join(" ");
 
       return (
-        <div className="flex items-center gap-3 px-3 py-1 font-mono font-bold text-slate-900 tracking-wider text-2xl md:text-3xl select-all">
+        <div className="flex flex-row items-center gap-3 px-3 py-1 font-mono font-bold text-slate-900 tracking-wider text-2xl md:text-3xl select-all whitespace-nowrap flex-nowrap min-w-max">
           {/* City code (e.g., DD, HN, HH) */}
-          <span>{city}</span>
+          <span className="whitespace-nowrap">{city}</span>
           
           {/* German HU-Plakette (TÜV) and City Seal sticker stack */}
           <div className="flex flex-col items-center justify-center gap-0.5 shrink-0 select-none">
@@ -52,26 +52,26 @@ export default function LicensePlate({ plateNumber }: LicensePlateProps) {
           </div>
 
           {/* Registration letters and numbers (e.g., OH 8989) */}
-          <span>{rest}</span>
+          <span className="whitespace-nowrap">{rest}</span>
         </div>
       );
     }
 
     // Fallback if no spaces exist in the plate number
     return (
-      <div className="px-5 py-1 font-mono font-bold text-slate-900 tracking-wider text-2xl md:text-3xl select-all">
+      <div className="px-5 py-1 font-mono font-bold text-slate-900 tracking-wider text-2xl md:text-3xl select-all whitespace-nowrap min-w-max">
         {rawPlate}
       </div>
     );
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-row items-center gap-3 whitespace-nowrap flex-nowrap min-w-max">
       {/* The License Plate */}
-      <div className="flex bg-white border-4 border-slate-950 rounded-lg shadow-sm overflow-hidden min-h-[48px] select-none">
+      <div className="flex flex-row bg-white border-4 border-slate-950 rounded-lg shadow-sm overflow-hidden min-h-[48px] select-none whitespace-nowrap flex-nowrap min-w-max">
         
         {/* Euroband (Far Left Blue Strip) */}
-        <div className="bg-blue-700 text-white flex flex-col items-center justify-between py-1 px-1.5 rounded-l-[2px] w-7 shrink-0">
+        <div className="bg-blue-700 text-white flex flex-col items-center justify-between py-1 px-1.5 rounded-l-[2px] w-7 shrink-0 whitespace-nowrap flex-nowrap">
           
           {/* EU Stars Ring SVG */}
           <svg viewBox="0 0 24 24" className="w-4 h-4 text-yellow-300 fill-current" xmlns="http://www.w3.org/2000/svg">
@@ -82,24 +82,24 @@ export default function LicensePlate({ plateNumber }: LicensePlateProps) {
                 const y = 7 * Math.sin(angle);
                 return (
                   <polygon
-                    key={i}
-                    points="0,-1.5 0.4,-0.4 1.5,-0.4 0.6,0.2 1,1.2 0,0.6 -1,1.2 -0.6,0.2 -1.5,-0.4 -0.4,-0.4"
-                    transform={`translate(${x}, ${y}) scale(0.55)`}
-                  />
-                );
-              })}
-            </g>
-          </svg>
-
-          {/* Country code "D" */}
-          <span className="text-[10px] font-black tracking-tighter leading-none mb-0.5">D</span>
+                      key={i}
+                      points="0,-1.5 0.4,-0.4 1.5,-0.4 0.6,0.2 1,1.2 0,0.6 -1,1.2 -0.6,0.2 -1.5,-0.4 -0.4,-0.4"
+                      transform={`translate(${x}, ${y}) scale(0.55)`}
+                    />
+                  );
+                })}
+              </g>
+            </svg>
+  
+            {/* Country code "D" */}
+            <span className="text-[10px] font-black tracking-tighter leading-none mb-0.5">D</span>
+          </div>
+  
+          {/* License Plate Text & Badges */}
+          <div className="flex flex-row items-center justify-center bg-white whitespace-nowrap flex-nowrap min-w-max">
+            {renderPlateContent()}
+          </div>
         </div>
-
-        {/* License Plate Text & Badges */}
-        <div className="flex items-center justify-center bg-white">
-          {renderPlateContent()}
-        </div>
-      </div>
 
       {/* Copy Button */}
       <button

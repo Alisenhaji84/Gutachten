@@ -473,8 +473,12 @@ export default function DashboardPage() {
                           </td>
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-slate-500 font-mono truncate max-w-[130px]" title={`${typeof window !== "undefined" ? window.location.origin : ""}/client/${c.client_token}`}>
-                                /client/{c.client_token.substring(0, 8)}...
+                              <span className="text-xs text-sky-600 hover:text-sky-800 font-semibold cursor-pointer hover:underline" title={`${typeof window !== "undefined" ? window.location.origin : ""}/client/${c.client_token}`} onClick={() => {
+                                  const link = `${window.location.origin}/client/${c.client_token}`;
+                                  navigator.clipboard.writeText(link);
+                                  alert("Kunden-Link in die Zwischenablage kopiert!");
+                              }}>
+                                Kunden-Link
                               </span>
                               <button
                                 onClick={() => {
@@ -531,8 +535,12 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="font-medium text-slate-400">Kundenportal:</span>
-                          <span className="font-mono text-slate-500 truncate max-w-[125px]">
-                            /client/{c.client_token.substring(0, 8)}...
+                          <span className="text-sky-600 hover:text-sky-800 font-semibold cursor-pointer hover:underline" title={`${typeof window !== "undefined" ? window.location.origin : ""}/client/${c.client_token}`} onClick={() => {
+                              const link = `${window.location.origin}/client/${c.client_token}`;
+                              navigator.clipboard.writeText(link);
+                              alert("Kunden-Link in die Zwischenablage kopiert!");
+                          }}>
+                            Kunden-Link
                           </span>
                           <button
                             onClick={() => {
