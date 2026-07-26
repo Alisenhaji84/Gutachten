@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.cases (
   opponent_insurance_number TEXT,
   is_scheckheft_maintained TEXT,
   is_accident_card_present TEXT,
+  assistant_payout NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

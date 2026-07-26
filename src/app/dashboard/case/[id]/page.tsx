@@ -49,6 +49,7 @@ export default function CaseDetailPage() {
   // Form inputs for editing
   const [selectedStatus, setSelectedStatus] = useState<CaseStatus>("Gutachten");
   const [selectedAssistantId, setSelectedAssistantId] = useState("");
+  const [assistantPayout, setAssistantPayout] = useState<string>("0");
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -101,6 +102,7 @@ export default function CaseDetailPage() {
       setCaseData(data);
       setSelectedStatus(data.status);
       setSelectedAssistantId(data.assistant_id || "");
+      setAssistantPayout(data.assistant_payout?.toString() || "0");
 
       const list = await getFilesForCase(caseId);
       setFiles(list);
@@ -126,6 +128,7 @@ export default function CaseDetailPage() {
       await updateCase(caseId, {
         status: selectedStatus,
         assistant_id: selectedAssistantId || undefined,
+        assistant_payout: parseFloat(assistantPayout) || 0,
       }, currentUser.role);
 
       setSuccessMsg("Änderungen erfolgreich gespeichert!");
@@ -262,6 +265,18 @@ export default function CaseDetailPage() {
               <span>{successMsg}</span>
             </div>
           )}
+
+          {currentUser.role === "assistant" && caseData.status === "Abgeschlossen" && caseData.assistant_payout && caseData.assistant_payout > 0 ? (
+            <div className="p-6 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl space-y-2 shadow-sm animate-fade-in">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>Ihre Vergütung für diesen Fall: {caseData.assistant_payout} €</span>
+              </h3>
+              <p className="text-sm text-emerald-700 font-medium">
+                Bitte erstellen Sie eine Rechnung über diesen exakten Betrag und senden Sie diese per E-Mail oder WhatsApp an die Geschäftsführung, um Ihre Auszahlung zu erhalten.
+              </p>
+            </div>
+          ) : null}
 
           {/* Client Details Section */}
           <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
@@ -493,6 +508,24 @@ export default function CaseDetailPage() {
                   <UserPlus className="absolute left-3 top-3 w-4.5 h-4.5 text-slate-400" />
                 </div>
               </div>
+
+              {/* Assistant Payout (Only if status is Abgeschlossen) */}
+              {selectedStatus === "Abgeschlossen" && (
+                <div className="animate-fade-in">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Vergütung für Mitarbeiter (€)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={assistantPayout}
+                    onChange={(e) => setAssistantPayout(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:border-sky-500 focus:bg-white transition-all font-semibold"
+                    placeholder="z.B. 150.00"
+                  />
+                </div>
+              )}
 
               {/* Update Button */}
               <button

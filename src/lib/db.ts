@@ -39,6 +39,7 @@ export interface Case {
   opponent_insurance_number?: string;
   is_scheckheft_maintained?: string;
   is_accident_card_present?: string;
+  assistant_payout?: number;
 }
 
 export interface CaseFile {
