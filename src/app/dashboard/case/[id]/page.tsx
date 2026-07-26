@@ -14,6 +14,7 @@ import {
   CaseStatus 
 } from "@/lib/db";
 import LicensePlate from "@/components/LicensePlate";
+import imageCompression from "browser-image-compression";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -138,11 +139,25 @@ export default function CaseDetailPage() {
   };
 
   // Read upload files
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !currentUser || !caseData) return;
     setUploadLoading(true);
     setFileName(file.name);
+
+    let fileToUpload = file;
+    if (file.type.startsWith("image/")) {
+      try {
+        const options = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+        };
+        fileToUpload = await imageCompression(file, options);
+      } catch (error) {
+        console.error("Fehler bei der Bildkompression, verwende Originaldatei:", error);
+      }
+    }
 
     const reader = new FileReader();
     reader.onload = async (event) => {
@@ -151,7 +166,7 @@ export default function CaseDetailPage() {
         await uploadFile(
           caseId,
           uploadType,
-          file.name,
+          fileToUpload.name || file.name,
           base64,
           currentUser.role
         );
@@ -161,7 +176,7 @@ export default function CaseDetailPage() {
         setFileName("");
         
         // Show success alert
-        setSuccessMsg(`Datei "${file.name}" erfolgreich hochgeladen!`);
+        setSuccessMsg(`Datei "${fileToUpload.name || file.name}" erfolgreich hochgeladen!`);
         setTimeout(() => setSuccessMsg(""), 3000);
       } catch (err: any) {
         console.error(err);
@@ -170,7 +185,7 @@ export default function CaseDetailPage() {
         setUploadLoading(false);
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileToUpload);
   };
 
   if (loading) {

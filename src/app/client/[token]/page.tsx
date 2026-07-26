@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getCaseByToken, updateCase, uploadFile, getFilesForCase, Case, CaseFile, initDb } from "@/lib/db";
 import confetti from "canvas-confetti";
 import LicensePlate from "@/components/LicensePlate";
+import imageCompression from "browser-image-compression";
 import { 
   Mail, 
   Phone, 
@@ -200,16 +201,31 @@ export default function ClientPortalPage() {
     }
   };
 
-  // Read upload files helper
-  const processFile = (file: File, callback: (result: {name: string; base64: string}) => void) => {
+  // Read upload files helper with client-side image compression
+  const processFile = async (file: File, callback: (result: {name: string; base64: string}) => void) => {
+    let fileToProcess = file;
+
+    if (file.type.startsWith("image/")) {
+      try {
+        const options = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+        };
+        fileToProcess = await imageCompression(file, options);
+      } catch (error) {
+        console.error("Fehler bei der Bildkompression, verwende Originaldatei:", error);
+      }
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       callback({
-        name: file.name,
+        name: fileToProcess.name || file.name,
         base64: event.target?.result as string,
       });
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileToProcess);
   };
 
   // Drag & drop handlers
@@ -325,18 +341,32 @@ export default function ClientPortalPage() {
 
     try {
       for (const file of Array.from(files)) {
+        let fileToUpload = file;
+        if (file.type.startsWith("image/")) {
+          try {
+            const options = {
+              maxSizeMB: 1,
+              maxWidthOrHeight: 1920,
+              useWebWorker: true,
+            };
+            fileToUpload = await imageCompression(file, options);
+          } catch (error) {
+            console.error("Fehler bei der Bildkompression, verwende Originaldatei:", error);
+          }
+        }
+
         const reader = new FileReader();
         await new Promise<void>((resolve, reject) => {
           reader.onload = async (event) => {
             const base64 = event.target?.result as string;
             try {
-              await uploadFile(caseData.id, "additional", file.name, base64, "client");
+              await uploadFile(caseData.id, "additional", fileToUpload.name || file.name, base64, "client");
               resolve();
             } catch (err) {
               reject(err);
             }
           };
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(fileToUpload);
         });
       }
       setRevisitFileMsg("Dateien erfolgreich hochgeladen und Administrator benachrichtigt!");
