@@ -439,6 +439,7 @@ export default function DashboardPage() {
                       <th className="py-4 px-6">Zugeordneter Mitarbeiter</th>
                       <th className="py-4 px-6">Status</th>
                       <th className="py-4 px-6">Erstellt am</th>
+                      <th className="py-4 px-6">Kunden-Link</th>
                       <th className="py-4 px-6 text-right">Aktionen</th>
                     </tr>
                   </thead>
@@ -469,6 +470,23 @@ export default function DashboardPage() {
                               month: "2-digit",
                               year: "numeric",
                             })}
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-slate-500 font-mono truncate max-w-[130px]" title={`${typeof window !== "undefined" ? window.location.origin : ""}/client/${c.client_token}`}>
+                                /client/{c.client_token.substring(0, 8)}...
+                              </span>
+                              <button
+                                onClick={() => {
+                                  const link = `${window.location.origin}/client/${c.client_token}`;
+                                  navigator.clipboard.writeText(link);
+                                }}
+                                className="p-1 hover:bg-slate-100 rounded text-sky-600 hover:text-sky-800 transition-all cursor-pointer"
+                                title="Link kopieren"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                           <td className="py-4 px-6 text-right">
                             <button
@@ -510,6 +528,22 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-1">
                           <span className="font-medium text-slate-400">Erstellt:</span>
                           <span>{new Date(c.created_at).toLocaleDateString("de-DE")}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-slate-400">Kundenportal:</span>
+                          <span className="font-mono text-slate-500 truncate max-w-[125px]">
+                            /client/{c.client_token.substring(0, 8)}...
+                          </span>
+                          <button
+                            onClick={() => {
+                              const link = `${window.location.origin}/client/${c.client_token}`;
+                              navigator.clipboard.writeText(link);
+                            }}
+                            className="p-0.5 hover:bg-slate-100 rounded text-sky-600 cursor-pointer"
+                            title="Link kopieren"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
                         </div>
                       </div>
                       <button

@@ -201,7 +201,9 @@ export async function getCaseById(id: string, currentUser: User): Promise<Case |
 }
 
 export async function createCase(licensePlate: string, assistantId?: string): Promise<Case> {
-  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const token = typeof crypto !== "undefined" && crypto.randomUUID 
+    ? crypto.randomUUID() 
+    : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   
   const { data, error } = await supabase
     .from("cases")
@@ -210,6 +212,7 @@ export async function createCase(licensePlate: string, assistantId?: string): Pr
       status: "Gutachten",
       assistant_id: assistantId || null,
       client_token: token,
+      created_at: new Date().toISOString(),
     })
     .select()
     .single();
