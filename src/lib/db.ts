@@ -382,11 +382,12 @@ export async function uploadFile(
   try {
     const { data: caseObj } = await supabase
       .from("cases")
-      .select("license_plate")
+      .select("license_plate, client_name")
       .eq("id", caseId)
       .single();
 
     const licensePlate = caseObj?.license_plate || "UNBEKANNT";
+    const clientName = caseObj?.client_name || "Kunde";
 
     await supabase.from("notifications").insert({
       case_id: caseId,
@@ -394,6 +395,22 @@ export async function uploadFile(
       file_name: fileName,
       uploaded_by: uploadedBy,
     });
+
+    // 6. Trigger non-blocking background email alert using Resend API Route
+    if (isBrowser()) {
+      fetch("/api/send-upload-alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId,
+          licensePlate,
+          clientName,
+          fileName,
+        }),
+      }).catch((emailErr) => {
+        console.error("Fehler beim Senden der E-Mail-Benachrichtigung über Resend:", emailErr);
+      });
+    }
   } catch (notifErr) {
     console.error("Fehler beim Erstellen der Admin-Benachrichtigung", notifErr);
   }
