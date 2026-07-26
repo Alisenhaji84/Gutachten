@@ -101,8 +101,26 @@ CREATE POLICY "Allow insert on case files" ON public.case_files
 
 -- Notifications policies
 DROP POLICY IF EXISTS "Allow admin full control on notifications" ON public.notifications;
-CREATE POLICY "Allow admin full control on notifications" ON public.notifications
-  FOR ALL USING (
+DROP POLICY IF EXISTS "Allow public insert on notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Allow authenticated select on notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Allow authenticated update on notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Allow admin delete on notifications" ON public.notifications;
+
+-- 1. Allow anyone (including anonymous clients uploading files) to insert notifications
+CREATE POLICY "Allow public insert on notifications" ON public.notifications
+  FOR INSERT WITH CHECK (true);
+
+-- 2. Allow logged-in users (admin/assistant) to select notifications
+CREATE POLICY "Allow authenticated select on notifications" ON public.notifications
+  FOR SELECT TO authenticated USING (true);
+
+-- 3. Allow logged-in users to update notifications (mark as read)
+CREATE POLICY "Allow authenticated update on notifications" ON public.notifications
+  FOR UPDATE TO authenticated USING (true);
+
+-- 4. Allow admins to delete notifications
+CREATE POLICY "Allow admin delete on notifications" ON public.notifications
+  FOR DELETE USING (
     (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
   );
 
