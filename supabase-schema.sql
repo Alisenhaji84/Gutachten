@@ -80,8 +80,20 @@ CREATE POLICY "Allow full admin control on cases" ON public.cases
   );
 
 DROP POLICY IF EXISTS "Allow assistant select/update on assigned cases" ON public.cases;
-CREATE POLICY "Allow assistant select/update on assigned cases" ON public.cases
+DROP POLICY IF EXISTS "Allow assistant select on assigned cases" ON public.cases;
+DROP POLICY IF EXISTS "Allow assistant insert on cases" ON public.cases;
+DROP POLICY IF EXISTS "Allow assistant update on assigned cases" ON public.cases;
+
+CREATE POLICY "Allow assistant select on assigned cases" ON public.cases
   FOR SELECT USING (assistant_id = auth.uid());
+
+CREATE POLICY "Allow assistant insert on cases" ON public.cases
+  FOR INSERT WITH CHECK (
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'assistant'
+  );
+
+CREATE POLICY "Allow assistant update on assigned cases" ON public.cases
+  FOR UPDATE USING (assistant_id = auth.uid());
 
 DROP POLICY IF EXISTS "Allow client token select on cases" ON public.cases;
 CREATE POLICY "Allow client token select on cases" ON public.cases

@@ -206,12 +206,31 @@ export async function createCase(licensePlate: string, assistantId?: string): Pr
     ? crypto.randomUUID() 
     : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   
+  let finalAssistantId = assistantId || null;
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      
+      if (profile?.role === "assistant") {
+        finalAssistantId = user.id;
+      }
+    }
+  } catch (err) {
+    console.error("Fehler beim Abrufen der Benutzerrolle bei der Fallerstellung:", err);
+  }
+
   const { data, error } = await supabase
     .from("cases")
     .insert({
       license_plate: licensePlate.toUpperCase().trim(),
       status: "Gutachten",
-      assistant_id: assistantId || null,
+      assistant_id: finalAssistantId,
       client_token: token,
       created_at: new Date().toISOString(),
     })
