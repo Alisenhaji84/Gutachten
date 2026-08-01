@@ -48,6 +48,8 @@ export default function ClientPortalPage() {
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
 
+  const isReadOnly = caseData?.status !== "Gutachten";
+
   // Form Fields State
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -154,7 +156,7 @@ export default function ClientPortalPage() {
 
   // Canvas signature handling
   useEffect(() => {
-    if (submitted || loading || !caseData) return;
+    if (isReadOnly || loading || !caseData) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -170,10 +172,10 @@ export default function ClientPortalPage() {
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
-  }, [submitted, loading, caseData]);
+  }, [isReadOnly, loading, caseData]);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (caseData?.status !== "Gutachten") return;
+    if (isReadOnly) return;
     e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -205,7 +207,7 @@ export default function ClientPortalPage() {
   };
 
   const clearCanvas = () => {
-    if (caseData?.status !== "Gutachten") return;
+    if (isReadOnly) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -498,7 +500,7 @@ export default function ClientPortalPage() {
             </p>
 
             {/* Revisit document uploader */}
-            {caseData.status === "Gutachten" && (
+            {!isReadOnly && (
               <div className="mt-6 pt-6 border-t border-slate-800">
                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
                   Weitere Dokumente hochladen
@@ -530,7 +532,7 @@ export default function ClientPortalPage() {
         {/* Form area */}
         <div className="px-6 sm:px-12 py-8 relative">
           
-          {submitted ? (
+          {submitted && isReadOnly ? (
             /* Submitted Form state: display only */
             <div className="space-y-6">
               <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-center">
@@ -593,14 +595,14 @@ export default function ClientPortalPage() {
               {/* Dotted vertical line timeline decoration */}
               <div className="timeline-line hidden sm:block" />
 
-              {caseData.status !== "Gutachten" && (
+              {isReadOnly && (
                 <div className="p-4 bg-amber-50 border border-amber-250 text-amber-800 text-xs rounded-xl flex items-center gap-2.5 font-semibold animate-fade-in shadow-sm">
                   <AlertCircle className="w-5 h-5 shrink-0 text-amber-600" />
                   <span>Die Bearbeitung der Daten und das Hochladen weiterer Dokumente ist nur im Status 'Gutachten' möglich.</span>
                 </div>
               )}
 
-              <fieldset disabled={caseData.status !== "Gutachten"} className="space-y-12 w-full">
+              <fieldset disabled={isReadOnly} className="space-y-12 w-full">
 
               {/* Step 1: Email */}
               <div className="relative pl-0 sm:pl-14">
@@ -888,7 +890,7 @@ export default function ClientPortalPage() {
                       Scheckheft hochladen (von einer anerkannten Vertragswerkstatt)
                     </label>
                     
-                    {caseData.status === "Gutachten" ? (
+                    {!isReadOnly ? (
                       <div 
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => handleFileDrop(e, "scheckheft")}
@@ -996,7 +998,7 @@ export default function ClientPortalPage() {
                       Unfallkarte Hochladen (falls vorhanden)
                     </label>
                     
-                    {caseData.status === "Gutachten" ? (
+                    {!isReadOnly ? (
                       <div 
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => handleFileDrop(e, "unfallkarte")}
@@ -1048,7 +1050,7 @@ export default function ClientPortalPage() {
                     Fotos vom Unfallort hochladen
                   </label>
                   
-                  {caseData.status === "Gutachten" ? (
+                  {!isReadOnly ? (
                     <div 
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => handleFileDrop(e, "photos")}
@@ -1141,7 +1143,7 @@ export default function ClientPortalPage() {
             </fieldset>
 
             {/* Step 16: Submit */}
-            {caseData.status === "Gutachten" && (
+            {!isReadOnly && (
               <div className="pt-6 relative pl-0 sm:pl-14 flex justify-center sm:justify-start">
                 <button
                   type="submit"

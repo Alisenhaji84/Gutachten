@@ -546,60 +546,69 @@ export default function CaseDetailPage() {
             </section>
           )}
 
-          {/* File Upload Box (Mitarbeiter & Admin) */}
+          {/* File Upload Box */}
           <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
               <Upload className="w-5 h-5 text-sky-500" />
               <span>Datei hochladen</span>
             </h2>
 
-            {/* Document Type Selector */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Kategorie
-              </label>
-              <select
-                value={uploadType}
-                onChange={(e) => setUploadType(e.target.value as CaseFile["file_type"])}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:border-sky-500 focus:bg-white transition-all cursor-pointer"
-              >
-                <option value="additional">Sonstiges Dokument</option>
-                <option value="scheckheft">Scheckheft</option>
-                <option value="accident_card">Unfallkarte</option>
-                <option value="accident_photos">Unfallfoto</option>
-              </select>
-            </div>
-
-            {/* Upload Button */}
-            <div className="relative">
-              <input
-                type="file"
-                id="internal-file-upload"
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={uploadLoading}
-              />
-              <label
-                htmlFor="internal-file-upload"
-                className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-sky-400 hover:bg-sky-50/20 rounded-2xl py-8 px-4 text-center cursor-pointer transition-all uploader-box group"
-              >
-                <div className="w-10 h-10 rounded-full bg-sky-500/10 text-sky-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-semibold text-slate-700 block">Datei auswählen</span>
-                <span className="text-xs text-slate-400 mt-1 block">PDF, PNG oder JPG</span>
-                {fileName && (
-                  <span className="text-xs text-sky-600 font-mono font-medium block mt-2 animate-pulse truncate max-w-full">
-                    {fileName}
-                  </span>
-                )}
-              </label>
-            </div>
-            
-            {uploadLoading && (
-              <div className="text-xs text-center text-sky-600 animate-pulse">
-                Upload läuft... Bitte warten.
+            {currentUser?.role === "assistant" && caseData.status !== "Gutachten" ? (
+              <div className="p-4 bg-amber-50 border border-amber-100 text-amber-850 text-xs rounded-xl flex items-center gap-2.5 font-semibold shadow-sm">
+                <AlertCircle className="w-5 h-5 shrink-0 text-amber-600" />
+                <span>Das Hochladen von Dateien ist für Mitarbeiter im Status 'Rechtsanwalt' nicht mehr möglich.</span>
               </div>
+            ) : (
+              <>
+                {/* Document Type Selector */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Kategorie
+                  </label>
+                  <select
+                    value={uploadType}
+                    onChange={(e) => setUploadType(e.target.value as CaseFile["file_type"])}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:border-sky-500 focus:bg-white transition-all cursor-pointer"
+                  >
+                    <option value="additional">Sonstiges Dokument</option>
+                    <option value="scheckheft">Scheckheft</option>
+                    <option value="accident_card">Unfallkarte</option>
+                    <option value="accident_photos">Unfallfoto</option>
+                  </select>
+                </div>
+
+                {/* Upload Button */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    id="internal-file-upload"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={uploadLoading}
+                  />
+                  <label
+                    htmlFor="internal-file-upload"
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-sky-400 hover:bg-sky-50/20 rounded-2xl py-8 px-4 text-center cursor-pointer transition-all uploader-box group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-sky-500/10 text-sky-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <span className="text-sm font-semibold text-slate-700 block">Datei auswählen</span>
+                    <span className="text-xs text-slate-400 mt-1 block">PDF, PNG oder JPG</span>
+                    {fileName && (
+                      <span className="text-xs text-sky-600 font-mono font-medium block mt-2 animate-pulse truncate max-w-full">
+                        {fileName}
+                      </span>
+                    )}
+                  </label>
+                </div>
+                
+                {uploadLoading && (
+                  <div className="text-xs text-center text-sky-600 animate-pulse">
+                    Upload läuft... Bitte warten.
+                  </div>
+                )}
+              </>
             )}
           </section>
 
