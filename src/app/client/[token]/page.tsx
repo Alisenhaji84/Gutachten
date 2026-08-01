@@ -145,6 +145,10 @@ export default function ClientPortalPage() {
             }
           }
           setSubmitted(true);
+          setIsEditing(false);
+        } else {
+          setSubmitted(false);
+          setIsEditing(true);
         }
         
         const filesList = await getFilesForCase(data.id);
@@ -691,7 +695,7 @@ export default function ClientPortalPage() {
                 </div>
               )}
 
-              {canEditByStatus && !isEditing && (
+              {submitted && canEditByStatus && !isEditing && (
                 <div className="flex justify-end relative z-10 pl-0 sm:pl-14 pb-2">
                   <button
                     type="button"
@@ -1245,7 +1249,7 @@ export default function ClientPortalPage() {
 
             {/* Step 16: Actions */}
             <div className="pt-6 relative pl-0 sm:pl-14 flex flex-wrap items-center gap-4 justify-center sm:justify-start">
-              {canEditByStatus && !isEditing && (
+              {submitted && canEditByStatus && !isEditing && (
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
@@ -1263,16 +1267,18 @@ export default function ClientPortalPage() {
                   >
                     SENDEN
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetFormState();
-                      setIsEditing(false);
-                    }}
-                    className="bg-slate-200 hover:bg-slate-350 text-slate-700 text-sm font-bold px-8 py-3.5 rounded-full transition-all active:scale-95 cursor-pointer select-none"
-                  >
-                    Abbrechen
-                  </button>
+                  {submitted && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetFormState();
+                        setIsEditing(false);
+                      }}
+                      className="bg-slate-200 hover:bg-slate-350 text-slate-700 text-sm font-bold px-8 py-3.5 rounded-full transition-all active:scale-95 cursor-pointer select-none"
+                    >
+                      Abbrechen
+                    </button>
+                  )}
                 </>
               )}
             </div>
