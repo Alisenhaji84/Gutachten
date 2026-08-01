@@ -47,8 +47,11 @@ export default function ClientPortalPage() {
   const [existingFiles, setExistingFiles] = useState<CaseFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const isReadOnly = caseData?.status !== "Gutachten";
+  const canEditByStatus = caseData?.status === "Gutachten";
+  const isFormDisabled = !canEditByStatus || !isEditing;
+  const isReadOnly = isFormDisabled;
 
   // Form Fields State
   const [email, setEmail] = useState("");
@@ -291,6 +294,91 @@ export default function ClientPortalPage() {
     }
   };
 
+  const resetFormState = () => {
+    if (!caseData) return;
+    setLicensePlate(caseData.license_plate);
+    if (caseData.client_email) {
+      setEmail(caseData.client_email);
+      const rawPhone = caseData.client_phone || "";
+      setPhone(rawPhone);
+      if (rawPhone) {
+        const matchingCode = EU_COUNTRY_CODES.find(item => rawPhone.startsWith(item.code));
+        if (matchingCode) {
+          setCountryCode(matchingCode.code);
+          setLocalPhone(rawPhone.substring(matchingCode.code.length).trim());
+        } else {
+          setCountryCode("+49");
+          setLocalPhone(rawPhone);
+        }
+      }
+      setOpponentPlate(caseData.opponent_license_plate || "");
+      setAccidentLocation(caseData.accident_location || "");
+      setAccidentDate(caseData.accident_date || "");
+      setDamageNumber(caseData.damage_number || "");
+      setOpponentInsuranceName(caseData.opponent_insurance_name || "");
+      setOpponentInsuranceNumber(caseData.opponent_insurance_number || "");
+      setIban(caseData.iban || "");
+      setOpposingInsuranceContacted(!!caseData.opposing_insurance_contacted);
+      
+      if (caseData.is_scheckheft_maintained) {
+        if (["Ja", "Nein"].includes(caseData.is_scheckheft_maintained)) {
+          setScheckheftChoice(caseData.is_scheckheft_maintained);
+          setScheckheftOther("");
+        } else {
+          setScheckheftChoice("Andere");
+          setScheckheftOther(caseData.is_scheckheft_maintained.replace("Andere: ", ""));
+        }
+      } else {
+        setScheckheftChoice("");
+        setScheckheftOther("");
+      }
+
+      if (caseData.is_accident_card_present) {
+        if (["Ja", "Nein"].includes(caseData.is_accident_card_present)) {
+          setUnfallkarteChoice(caseData.is_accident_card_present);
+          setUnfallkarteOther("");
+        } else {
+          setUnfallkarteChoice("Andere");
+          setUnfallkarteOther(caseData.is_accident_card_present.replace("Andere: ", ""));
+        }
+      } else {
+        setUnfallkarteChoice("");
+        setUnfallkarteOther("");
+      }
+    } else {
+      // Clear fields if not submitted yet
+      setEmail("");
+      setPhone("");
+      setCountryCode("+49");
+      setLocalPhone("");
+      setOpponentPlate("");
+      setAccidentLocation("");
+      setAccidentDate("");
+      setDamageNumber("");
+      setOpponentInsuranceName("");
+      setOpponentInsuranceNumber("");
+      setIban("");
+      setOpposingInsuranceContacted(false);
+      setScheckheftChoice("");
+      setScheckheftOther("");
+      setUnfallkarteChoice("");
+      setUnfallkarteOther("");
+    }
+
+    // Reset local files & signature drawing
+    setScheckheftFile(null);
+    setUnfallkarteFile(null);
+    setAccidentPhotos([]);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    setSignatureSaved(false);
+  };
+
   // Form Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,6 +437,7 @@ export default function ClientPortalPage() {
       });
 
       setSubmitted(true);
+      setIsEditing(false);
       fetchCaseByToken(); // Reload to show status & existing files
     } catch (err: any) {
       console.error(err);
@@ -599,6 +688,18 @@ export default function ClientPortalPage() {
                 <div className="p-4 bg-amber-50 border border-amber-250 text-amber-800 text-xs rounded-xl flex items-center gap-2.5 font-semibold animate-fade-in shadow-sm">
                   <AlertCircle className="w-5 h-5 shrink-0 text-amber-600" />
                   <span>Die Bearbeitung der Daten und das Hochladen weiterer Dokumente ist nur im Status 'Gutachten' möglich.</span>
+                </div>
+              )}
+
+              {canEditByStatus && !isEditing && (
+                <div className="flex justify-end relative z-10 pl-0 sm:pl-14 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer text-xs select-none"
+                  >
+                    <span>✏️ Angaben bearbeiten</span>
+                  </button>
                 </div>
               )}
 
@@ -1142,17 +1243,39 @@ export default function ClientPortalPage() {
 
             </fieldset>
 
-            {/* Step 16: Submit */}
-            {!isReadOnly && (
-              <div className="pt-6 relative pl-0 sm:pl-14 flex justify-center sm:justify-start">
+            {/* Step 16: Actions */}
+            <div className="pt-6 relative pl-0 sm:pl-14 flex flex-wrap items-center gap-4 justify-center sm:justify-start">
+              {canEditByStatus && !isEditing && (
                 <button
-                  type="submit"
-                  className="bg-[#38bdf8] hover:bg-[#0ea5e9] text-white text-base font-black px-12 py-4 rounded-full uppercase tracking-wider transition-all shadow-lg shadow-sky-400/20 active:scale-95 cursor-pointer select-none"
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold px-8 py-3.5 rounded-full transition-all shadow-md active:scale-95 cursor-pointer select-none"
                 >
-                  SENDEN
+                  ✏️ Angaben bearbeiten
                 </button>
-              </div>
-            )}
+              )}
+
+              {isEditing && (
+                <>
+                  <button
+                    type="submit"
+                    className="bg-[#38bdf8] hover:bg-[#0ea5e9] text-white text-base font-black px-12 py-4 rounded-full uppercase tracking-wider transition-all shadow-lg shadow-sky-400/20 active:scale-95 cursor-pointer select-none"
+                  >
+                    SENDEN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetFormState();
+                      setIsEditing(false);
+                    }}
+                    className="bg-slate-200 hover:bg-slate-350 text-slate-700 text-sm font-bold px-8 py-3.5 rounded-full transition-all active:scale-95 cursor-pointer select-none"
+                  >
+                    Abbrechen
+                  </button>
+                </>
+              )}
+            </div>
 
             </form>
           )}
