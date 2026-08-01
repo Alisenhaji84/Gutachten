@@ -12,7 +12,9 @@ import {
   CaseStatus,
   getNotifications,
   markNotificationsAsRead,
-  Notification
+  Notification,
+  deleteCase,
+  archiveCase
 } from "@/lib/db";
 import QRCode from "qrcode";
 import LicensePlate from "@/components/LicensePlate";
@@ -34,7 +36,9 @@ import {
   X,
   ChevronRight,
   FolderOpen,
-  UserCheck
+  UserCheck,
+  Trash2,
+  Archive
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -102,6 +106,34 @@ export default function DashboardPage() {
   const handleLogout = () => {
     localStorage.removeItem("kfz_current_user");
     router.push("/admin");
+  };
+
+  const handleDeleteCase = async (caseId: string) => {
+    if (!window.confirm("Möchten Sie diesen Fall und alle Dateien wirklich endgültig löschen?")) return;
+    try {
+      await deleteCase(caseId);
+      alert("Fall erfolgreich gelöscht.");
+      if (currentUser) {
+        fetchData(currentUser);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Fehler beim Löschen des Falls.");
+    }
+  };
+
+  const handleArchiveCase = async (caseId: string) => {
+    if (!window.confirm("Möchten Sie alle Dateien löschen und den Fall archivieren? Daten und Vergütung bleiben erhalten.")) return;
+    try {
+      await archiveCase(caseId);
+      alert("Fall erfolgreich archiviert und Dateien bereinigt.");
+      if (currentUser) {
+        fetchData(currentUser);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Fehler beim Archivieren des Falls.");
+    }
   };
 
   const handleCreateCase = async (e: React.FormEvent) => {
@@ -492,14 +524,35 @@ export default function DashboardPage() {
                               </button>
                             </div>
                           </td>
-                          <td className="py-4 px-6 text-right">
-                            <button
-                              onClick={() => router.push(`/dashboard/case/${c.id}`)}
-                              className="inline-flex items-center gap-1 text-sky-600 hover:text-sky-800 font-semibold transition-colors cursor-pointer"
-                            >
-                              <span>Ansehen</span>
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
+                           <td className="py-4 px-6 text-right">
+                            <div className="flex items-center justify-end gap-3">
+                              <button
+                                onClick={() => router.push(`/dashboard/case/${c.id}`)}
+                                className="inline-flex items-center gap-1 text-sky-600 hover:text-sky-800 font-semibold transition-colors cursor-pointer"
+                                title="Ansehen"
+                              >
+                                <span>Ansehen</span>
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
+                              {currentUser?.role === "admin" && c.status !== "Archiviert" && (
+                                <button
+                                  onClick={() => handleArchiveCase(c.id)}
+                                  className="p-1 hover:bg-slate-100 rounded text-amber-600 hover:text-amber-800 transition-colors cursor-pointer select-none"
+                                  title="Fall archivieren"
+                                >
+                                  <Archive className="w-4 h-4" />
+                                </button>
+                              )}
+                              {currentUser?.role === "admin" && (
+                                <button
+                                  onClick={() => handleDeleteCase(c.id)}
+                                  className="p-1 hover:bg-red-50 rounded text-red-600 hover:text-red-850 transition-colors cursor-pointer select-none"
+                                  title="Fall endgültig löschen"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -554,12 +607,32 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </div>
-                      <button
-                        onClick={() => router.push(`/dashboard/case/${c.id}`)}
-                        className="w-full text-center bg-slate-50 hover:bg-slate-100 text-sky-600 font-semibold py-2 px-4 rounded-xl text-sm transition-colors border border-slate-100 cursor-pointer"
-                      >
-                        Ansehen & Bearbeiten
-                      </button>
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          onClick={() => router.push(`/dashboard/case/${c.id}`)}
+                          className="flex-1 text-center bg-slate-50 hover:bg-slate-100 text-sky-600 font-semibold py-2 px-4 rounded-xl text-sm transition-colors border border-slate-100 cursor-pointer"
+                        >
+                          Ansehen & Bearbeiten
+                        </button>
+                        {currentUser?.role === "admin" && c.status !== "Archiviert" && (
+                          <button
+                            onClick={() => handleArchiveCase(c.id)}
+                            className="p-2 bg-amber-50 hover:bg-amber-100 rounded-xl text-amber-600 transition-all border border-amber-100 cursor-pointer shrink-0 select-none"
+                            title="Archivieren"
+                          >
+                            <Archive className="w-4.5 h-4.5" />
+                          </button>
+                        )}
+                        {currentUser?.role === "admin" && (
+                          <button
+                            onClick={() => handleDeleteCase(c.id)}
+                            className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-650 transition-all border border-red-100 cursor-pointer shrink-0 select-none"
+                            title="Löschen"
+                          >
+                            <Trash2 className="w-4.5 h-4.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -718,6 +791,12 @@ function StatusBadge({ status }: { status: CaseStatus }) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200/50">
           Abgeschlossen
+        </span>
+      );
+    case "Archiviert":
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200/50 animate-fade-in">
+          Archiviert
         </span>
       );
     default:

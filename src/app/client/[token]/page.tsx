@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { getCaseByToken, updateCase, uploadFile, getFilesForCase, Case, CaseFile, initDb } from "@/lib/db";
 import confetti from "canvas-confetti";
 import LicensePlate from "@/components/LicensePlate";
-import imageCompression from "browser-image-compression";
 import { 
   Mail, 
   Phone, 
@@ -25,6 +24,20 @@ import {
   Download
 } from "lucide-react";
 
+const EU_COUNTRY_CODES = [
+  { code: "+49", label: "DE (+49)" },
+  { code: "+43", label: "AT (+43)" },
+  { code: "+41", label: "CH (+41)" },
+  { code: "+33", label: "FR (+33)" },
+  { code: "+31", label: "NL (+31)" },
+  { code: "+32", label: "BE (+32)" },
+  { code: "+48", label: "PL (+48)" },
+  { code: "+420", label: "CZ (+420)" },
+  { code: "+39", label: "IT (+39)" },
+  { code: "+34", label: "ES (+34)" },
+  { code: "+44", label: "GB (+44)" },
+];
+
 export default function ClientPortalPage() {
   const params = useParams();
   const router = useRouter();
@@ -38,6 +51,8 @@ export default function ClientPortalPage() {
   // Form Fields State
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+49");
+  const [localPhone, setLocalPhone] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
   const [opponentPlate, setOpponentPlate] = useState("");
   const [accidentLocation, setAccidentLocation] = useState("");
@@ -86,7 +101,18 @@ export default function ClientPortalPage() {
         // If client already submitted, load existing data & files
         if (data.client_email) {
           setEmail(data.client_email);
-          setPhone(data.client_phone || "");
+          const rawPhone = data.client_phone || "";
+          setPhone(rawPhone);
+          if (rawPhone) {
+            const matchingCode = EU_COUNTRY_CODES.find(item => rawPhone.startsWith(item.code));
+            if (matchingCode) {
+              setCountryCode(matchingCode.code);
+              setLocalPhone(rawPhone.substring(matchingCode.code.length).trim());
+            } else {
+              setCountryCode("+49");
+              setLocalPhone(rawPhone);
+            }
+          }
           setOpponentPlate(data.opponent_license_plate || "");
           setAccidentLocation(data.accident_location || "");
           setAccidentDate(data.accident_date || "");
@@ -147,6 +173,7 @@ export default function ClientPortalPage() {
   }, [submitted, loading, caseData]);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (caseData?.status !== "Gutachten") return;
     e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -178,6 +205,7 @@ export default function ClientPortalPage() {
   };
 
   const clearCanvas = () => {
+    if (caseData?.status !== "Gutachten") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -205,31 +233,16 @@ export default function ClientPortalPage() {
     }
   };
 
-  // Read upload files helper with client-side image compression
+  // Read upload files helper
   const processFile = async (file: File, callback: (result: {name: string; base64: string}) => void) => {
-    let fileToProcess = file;
-
-    if (file.type.startsWith("image/")) {
-      try {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1920,
-          useWebWorker: true,
-        };
-        fileToProcess = await imageCompression(file, options);
-      } catch (error) {
-        console.error("Fehler bei der Bildkompression, verwende Originaldatei:", error);
-      }
-    }
-
     const reader = new FileReader();
     reader.onload = (event) => {
       callback({
-        name: fileToProcess.name || file.name,
+        name: file.name,
         base64: event.target?.result as string,
       });
     };
-    reader.readAsDataURL(fileToProcess);
+    reader.readAsDataURL(file);
   };
 
   // Drag & drop handlers
@@ -294,10 +307,13 @@ export default function ClientPortalPage() {
     const unfallkarteText = unfallkarteChoice === "Andere" ? `Andere: ${unfallkarteOther}` : unfallkarteChoice;
 
     try {
+      const combinedPhone = countryCode + localPhone.replace(/[^\d]/g, "");
+      setPhone(combinedPhone);
+
       // Update Case Details
       await updateCase(caseData.id, {
         client_email: email,
-        client_phone: phone,
+        client_phone: combinedPhone,
         license_plate: licensePlate.toUpperCase().trim(),
         opponent_license_plate: opponentPlate.toUpperCase().trim(),
         accident_location: accidentLocation,
@@ -347,32 +363,18 @@ export default function ClientPortalPage() {
 
     try {
       for (const file of Array.from(files)) {
-        let fileToUpload = file;
-        if (file.type.startsWith("image/")) {
-          try {
-            const options = {
-              maxSizeMB: 1,
-              maxWidthOrHeight: 1920,
-              useWebWorker: true,
-            };
-            fileToUpload = await imageCompression(file, options);
-          } catch (error) {
-            console.error("Fehler bei der Bildkompression, verwende Originaldatei:", error);
-          }
-        }
-
         const reader = new FileReader();
         await new Promise<void>((resolve, reject) => {
           reader.onload = async (event) => {
             const base64 = event.target?.result as string;
             try {
-              await uploadFile(caseData.id, "additional", fileToUpload.name || file.name, base64, "client");
+              await uploadFile(caseData.id, "additional", file.name, base64, "client");
               resolve();
             } catch (err) {
               reject(err);
             }
           };
-          reader.readAsDataURL(fileToUpload);
+          reader.readAsDataURL(file);
         });
       }
       setRevisitFileMsg("Dateien erfolgreich hochgeladen und Administrator benachrichtigt!");
@@ -477,46 +479,51 @@ export default function ClientPortalPage() {
               <div className="h-0.5 flex-1 bg-slate-800 mx-2" />
               <div className="flex flex-col items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                  caseData.status === "Abgeschlossen" ? "bg-emerald-500 text-slate-950 ring-4 ring-emerald-500/20" : "bg-slate-800 text-slate-400"
+                  caseData.status === "Abgeschlossen" || caseData.status === "Archiviert" ? "bg-emerald-500 text-slate-950 ring-4 ring-emerald-500/20" : "bg-slate-800 text-slate-400"
                 }`}>
                   3
                 </div>
-                <span className="text-[10px] mt-1 font-semibold text-slate-400">Abgeschlossen</span>
+                <span className="text-[10px] mt-1 font-semibold text-slate-400">
+                  {caseData.status === "Archiviert" ? "Archiviert" : "Abgeschlossen"}
+                </span>
               </div>
             </div>
 
             {/* Current status description */}
             <p className="text-xs text-slate-300 mt-6 bg-slate-950/40 p-3 rounded-lg border border-slate-800">
               {caseData.status === "Gutachten" && "ℹ️ Wir bearbeiten derzeit die Aufnahme Ihres Schadensfalls."}
-              {caseData.status === "Rechtsanwalt" && "⚖️ Ihr Fall wurde an den zuständigen Anwalt zur Durchsetzung Ihrer Ansprüche übergeben."}
+              {caseData.status === "Rechtsanwalt" && "⚖️ Ihr Fall wurde an den zuständigen Anwalt zur Durchsetzung Ihrer Ansprüche übergeben. Bitte wenden Sie sich bei allen weiteren Fragen direkt an ihn."}
               {caseData.status === "Abgeschlossen" && "✅ Die Schadensabwicklung ist abgeschlossen. Das Gutachten wurde erstellt und übermittelt."}
+              {caseData.status === "Archiviert" && "📦 Dieser Fall wurde archiviert. Alle hochgeladenen Dokumente und Bilder wurden zur Speicherplatzfreigabe gelöscht."}
             </p>
 
             {/* Revisit document uploader */}
-            <div className="mt-6 pt-6 border-t border-slate-800">
-              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
-                Weitere Dokumente hochladen
-              </h4>
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <input
-                  type="file"
-                  id="client-revisit-upload"
-                  multiple
-                  onChange={handleAdditionalUpload}
-                  className="hidden"
-                  disabled={revisitUploadLoading}
-                />
-                <label
-                  htmlFor="client-revisit-upload"
-                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none"
-                >
-                  <Upload className="w-4 h-4 text-sky-400" />
-                  <span>Dateien auswählen</span>
-                </label>
-                {revisitUploadLoading && <span className="text-xs text-sky-400 animate-pulse">Upload läuft...</span>}
-                {revisitFileMsg && <span className="text-xs text-emerald-400">{revisitFileMsg}</span>}
+            {caseData.status === "Gutachten" && (
+              <div className="mt-6 pt-6 border-t border-slate-800">
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
+                  Weitere Dokumente hochladen
+                </h4>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <input
+                    type="file"
+                    id="client-revisit-upload"
+                    multiple
+                    onChange={handleAdditionalUpload}
+                    className="hidden"
+                    disabled={revisitUploadLoading}
+                  />
+                  <label
+                    htmlFor="client-revisit-upload"
+                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none"
+                  >
+                    <Upload className="w-4 h-4 text-sky-400" />
+                    <span>Dateien auswählen</span>
+                  </label>
+                  {revisitUploadLoading && <span className="text-xs text-sky-400 animate-pulse">Upload läuft...</span>}
+                  {revisitFileMsg && <span className="text-xs text-emerald-400">{revisitFileMsg}</span>}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -586,6 +593,15 @@ export default function ClientPortalPage() {
               {/* Dotted vertical line timeline decoration */}
               <div className="timeline-line hidden sm:block" />
 
+              {caseData.status !== "Gutachten" && (
+                <div className="p-4 bg-amber-50 border border-amber-250 text-amber-800 text-xs rounded-xl flex items-center gap-2.5 font-semibold animate-fade-in shadow-sm">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-amber-600" />
+                  <span>Die Bearbeitung der Daten und das Hochladen weiterer Dokumente ist nur im Status 'Gutachten' möglich.</span>
+                </div>
+              )}
+
+              <fieldset disabled={caseData.status !== "Gutachten"} className="space-y-12 w-full">
+
               {/* Step 1: Email */}
               <div className="relative pl-0 sm:pl-14">
                 <TimelineStepIcon icon={<Mail className="w-4 h-4 text-slate-500" />} />
@@ -611,14 +627,27 @@ export default function ClientPortalPage() {
                   <label className="block text-sm font-bold text-slate-800">
                     Telefonnummer<span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+49 170 1234567"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full border-b border-slate-200 focus:border-sky-500 py-2 outline-none text-slate-800 transition-colors placeholder:text-slate-300"
-                  />
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="bg-transparent border-b border-slate-200 focus:border-sky-500 py-2 outline-none text-slate-800 font-semibold cursor-pointer"
+                    >
+                      {EU_COUNTRY_CODES.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="170 1234567"
+                      value={localPhone}
+                      onChange={(e) => setLocalPhone(e.target.value)}
+                      className="flex-1 border-b border-slate-200 focus:border-sky-500 py-2 outline-none text-slate-800 transition-colors placeholder:text-slate-300 font-semibold"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -859,29 +888,33 @@ export default function ClientPortalPage() {
                       Scheckheft hochladen (von einer anerkannten Vertragswerkstatt)
                     </label>
                     
-                    <div 
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => handleFileDrop(e, "scheckheft")}
-                      className="border-2 border-dashed border-slate-200 hover:border-sky-500 hover:bg-sky-50/10 rounded-2xl p-6 text-center cursor-pointer transition-all uploader-box relative"
-                    >
-                      <input
-                        type="file"
-                        id="scheckheft-upload-input"
-                        onChange={(e) => handleFileSelect(e, "scheckheft")}
-                        className="hidden"
-                      />
-                      <label htmlFor="scheckheft-upload-input" className="cursor-pointer block">
-                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                        <span className="text-sm font-semibold text-slate-700 block">
-                          Ziehen Sie Ihre Dateien per Drag & Drop hierher
-                        </span>
-                        <span className="text-xs text-slate-400 block my-1">——— oder ———</span>
-                        <span className="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg inline-block font-semibold transition-colors mt-1">
-                          Nach Dateien suchen
-                        </span>
-                        <span className="text-[10px] text-slate-400 mt-2 block">Größenlimit: 10.0 Mb</span>
-                      </label>
-                    </div>
+                    {caseData.status === "Gutachten" ? (
+                      <div 
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => handleFileDrop(e, "scheckheft")}
+                        className="border-2 border-dashed border-slate-200 hover:border-sky-500 hover:bg-sky-50/10 rounded-2xl p-6 text-center cursor-pointer transition-all uploader-box relative"
+                      >
+                        <input
+                          type="file"
+                          id="scheckheft-upload-input"
+                          onChange={(e) => handleFileSelect(e, "scheckheft")}
+                          className="hidden"
+                        />
+                        <label htmlFor="scheckheft-upload-input" className="cursor-pointer block">
+                          <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                          <span className="text-sm font-semibold text-slate-700 block">
+                            Ziehen Sie Ihre Dateien per Drag & Drop hierher
+                          </span>
+                          <span className="text-xs text-slate-400 block my-1">——— oder ———</span>
+                          <span className="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg inline-block font-semibold transition-colors mt-1">
+                            Nach Dateien suchen
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-2 block">Größenlimit: 10.0 Mb</span>
+                        </label>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-amber-600 italic bg-amber-50 p-3 border border-amber-200 rounded-xl">Upload nur im Status 'Gutachten' möglich.</p>
+                    )}
 
                     {scheckheftFile && (
                       <div className="flex items-center justify-between bg-sky-50/40 border border-sky-100 px-4 py-2.5 rounded-xl">
@@ -963,29 +996,33 @@ export default function ClientPortalPage() {
                       Unfallkarte Hochladen (falls vorhanden)
                     </label>
                     
-                    <div 
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => handleFileDrop(e, "unfallkarte")}
-                      className="border-2 border-dashed border-slate-200 hover:border-sky-500 hover:bg-sky-50/10 rounded-2xl p-6 text-center cursor-pointer transition-all uploader-box relative"
-                    >
-                      <input
-                        type="file"
-                        id="unfallkarte-upload-input"
-                        onChange={(e) => handleFileSelect(e, "unfallkarte")}
-                        className="hidden"
-                      />
-                      <label htmlFor="unfallkarte-upload-input" className="cursor-pointer block">
-                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                        <span className="text-sm font-semibold text-slate-700 block">
-                          Ziehen Sie Ihre Dateien per Drag & Drop hierher
-                        </span>
-                        <span className="text-xs text-slate-400 block my-1">——— oder ———</span>
-                        <span className="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg inline-block font-semibold transition-colors mt-1">
-                          Nach Dateien suchen
-                        </span>
-                        <span className="text-[10px] text-slate-400 mt-2 block">Größenlimit: 100.0 Mb</span>
-                      </label>
-                    </div>
+                    {caseData.status === "Gutachten" ? (
+                      <div 
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => handleFileDrop(e, "unfallkarte")}
+                        className="border-2 border-dashed border-slate-200 hover:border-sky-500 hover:bg-sky-50/10 rounded-2xl p-6 text-center cursor-pointer transition-all uploader-box relative"
+                      >
+                        <input
+                          type="file"
+                          id="unfallkarte-upload-input"
+                          onChange={(e) => handleFileSelect(e, "unfallkarte")}
+                          className="hidden"
+                        />
+                        <label htmlFor="unfallkarte-upload-input" className="cursor-pointer block">
+                          <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                          <span className="text-sm font-semibold text-slate-700 block">
+                            Ziehen Sie Ihre Dateien per Drag & Drop hierher
+                          </span>
+                          <span className="text-xs text-slate-400 block my-1">——— oder ———</span>
+                          <span className="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg inline-block font-semibold transition-colors mt-1">
+                            Nach Dateien suchen
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-2 block">Größenlimit: 100.0 Mb</span>
+                        </label>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-amber-600 italic bg-amber-50 p-3 border border-amber-200 rounded-xl">Upload nur im Status 'Gutachten' möglich.</p>
+                    )}
 
                     {unfallkarteFile && (
                       <div className="flex items-center justify-between bg-sky-50/40 border border-sky-100 px-4 py-2.5 rounded-xl">
@@ -1011,30 +1048,34 @@ export default function ClientPortalPage() {
                     Fotos vom Unfallort hochladen
                   </label>
                   
-                  <div 
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleFileDrop(e, "photos")}
-                    className="border-2 border-dashed border-slate-200 hover:border-sky-500 hover:bg-sky-50/10 rounded-2xl p-6 text-center cursor-pointer transition-all uploader-box relative"
-                  >
-                    <input
-                      type="file"
-                      id="photos-upload-input"
-                      multiple
-                      onChange={(e) => handleFileSelect(e, "photos")}
-                      className="hidden"
-                    />
-                    <label htmlFor="photos-upload-input" className="cursor-pointer block">
-                      <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                      <span className="text-sm font-semibold text-slate-700 block">
-                        Ziehen Sie Ihre Dateien per Drag & Drop hierher
-                      </span>
-                      <span className="text-xs text-slate-400 block my-1">——— oder ———</span>
-                      <span className="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg inline-block font-semibold transition-colors mt-1">
-                        Nach Dateien suchen
-                      </span>
-                      <span className="text-[10px] text-slate-400 mt-2 block">Größenlimit: 100.0 Mb</span>
-                    </label>
-                  </div>
+                  {caseData.status === "Gutachten" ? (
+                    <div 
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleFileDrop(e, "photos")}
+                      className="border-2 border-dashed border-slate-200 hover:border-sky-500 hover:bg-sky-50/10 rounded-2xl p-6 text-center cursor-pointer transition-all uploader-box relative"
+                    >
+                      <input
+                        type="file"
+                        id="photos-upload-input"
+                        multiple
+                        onChange={(e) => handleFileSelect(e, "photos")}
+                        className="hidden"
+                      />
+                      <label htmlFor="photos-upload-input" className="cursor-pointer block">
+                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                        <span className="text-sm font-semibold text-slate-700 block">
+                          Ziehen Sie Ihre Dateien per Drag & Drop hierher
+                        </span>
+                        <span className="text-xs text-slate-400 block my-1">——— oder ———</span>
+                        <span className="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg inline-block font-semibold transition-colors mt-1">
+                          Nach Dateien suchen
+                        </span>
+                        <span className="text-[10px] text-slate-400 mt-2 block">Größenlimit: 100.0 Mb</span>
+                      </label>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-amber-600 italic bg-amber-50 p-3 border border-amber-200 rounded-xl">Upload nur im Status 'Gutachten' möglich.</p>
+                  )}
 
                   {accidentPhotos.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
@@ -1097,7 +1138,10 @@ export default function ClientPortalPage() {
                 </div>
               </div>
 
-              {/* Step 16: Submit */}
+            </fieldset>
+
+            {/* Step 16: Submit */}
+            {caseData.status === "Gutachten" && (
               <div className="pt-6 relative pl-0 sm:pl-14 flex justify-center sm:justify-start">
                 <button
                   type="submit"
@@ -1106,6 +1150,7 @@ export default function ClientPortalPage() {
                   SENDEN
                 </button>
               </div>
+            )}
 
             </form>
           )}

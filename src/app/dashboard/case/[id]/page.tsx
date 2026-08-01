@@ -11,10 +11,10 @@ import {
   Case, 
   CaseFile, 
   User, 
-  CaseStatus 
+  CaseStatus,
+  archiveCase
 } from "@/lib/db";
 import LicensePlate from "@/components/LicensePlate";
-import imageCompression from "browser-image-compression";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -125,11 +125,23 @@ export default function CaseDetailPage() {
     setErrorMsg("");
 
     try {
-      await updateCase(caseId, {
-        status: selectedStatus,
-        assistant_id: selectedAssistantId || undefined,
-        assistant_payout: parseFloat(assistantPayout) || 0,
-      }, currentUser.role);
+      if (selectedStatus === "Archiviert" && caseData?.status !== "Archiviert") {
+        const confirmArchive = window.confirm("Möchten Sie alle Dateien löschen und den Fall archivieren? Daten und Vergütung bleiben erhalten.");
+        if (!confirmArchive) return;
+        
+        await archiveCase(caseId);
+        
+        await updateCase(caseId, {
+          assistant_id: selectedAssistantId || undefined,
+          assistant_payout: parseFloat(assistantPayout) || 0,
+        }, currentUser.role);
+      } else {
+        await updateCase(caseId, {
+          status: selectedStatus,
+          assistant_id: selectedAssistantId || undefined,
+          assistant_payout: parseFloat(assistantPayout) || 0,
+        }, currentUser.role);
+      }
 
       setSuccessMsg("Änderungen erfolgreich gespeichert!");
       setTimeout(() => setSuccessMsg(""), 3000);
@@ -137,6 +149,7 @@ export default function CaseDetailPage() {
       // Refresh details
       fetchCaseDetails(currentUser);
     } catch (err) {
+      console.error(err);
       setErrorMsg("Fehler beim Aktualisieren des Falls.");
     }
   };
@@ -148,20 +161,6 @@ export default function CaseDetailPage() {
     setUploadLoading(true);
     setFileName(file.name);
 
-    let fileToUpload = file;
-    if (file.type.startsWith("image/")) {
-      try {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1920,
-          useWebWorker: true,
-        };
-        fileToUpload = await imageCompression(file, options);
-      } catch (error) {
-        console.error("Fehler bei der Bildkompression, verwende Originaldatei:", error);
-      }
-    }
-
     const reader = new FileReader();
     reader.onload = async (event) => {
       const base64 = event.target?.result as string;
@@ -169,7 +168,7 @@ export default function CaseDetailPage() {
         await uploadFile(
           caseId,
           uploadType,
-          fileToUpload.name || file.name,
+          file.name,
           base64,
           currentUser.role
         );
@@ -179,7 +178,7 @@ export default function CaseDetailPage() {
         setFileName("");
         
         // Show success alert
-        setSuccessMsg(`Datei "${fileToUpload.name || file.name}" erfolgreich hochgeladen!`);
+        setSuccessMsg(`Datei "${file.name}" erfolgreich hochgeladen!`);
         setTimeout(() => setSuccessMsg(""), 3000);
       } catch (err: any) {
         console.error(err);
@@ -188,7 +187,7 @@ export default function CaseDetailPage() {
         setUploadLoading(false);
       }
     };
-    reader.readAsDataURL(fileToUpload);
+    reader.readAsDataURL(file);
   };
 
   if (loading) {
@@ -266,7 +265,7 @@ export default function CaseDetailPage() {
             </div>
           )}
 
-          {currentUser.role === "assistant" && caseData.status === "Abgeschlossen" && caseData.assistant_payout && caseData.assistant_payout > 0 ? (
+          {currentUser.role === "assistant" && (caseData.status === "Abgeschlossen" || caseData.status === "Archiviert") && caseData.assistant_payout && caseData.assistant_payout > 0 ? (
             <div className="p-6 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl space-y-2 shadow-sm animate-fade-in">
               <h3 className="font-bold text-base flex items-center gap-2">
                 <Check className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -346,7 +345,7 @@ export default function CaseDetailPage() {
                         <span className="font-semibold text-slate-700 text-sm sm:text-base">{caseData.client_phone || "-"}</span>
                         {caseData.client_phone && (
                           <a
-                            href={`https://wa.me/${caseData.client_phone.replace(/[^\d+]/g, '')}`}
+                            href={`https://wa.me/${getCleanedWhatsAppNumber(caseData.client_phone)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 rounded-full hover:bg-slate-100 transition-colors flex items-center justify-center select-none"
@@ -626,6 +625,13 @@ export default function CaseDetailPage() {
             <span>Hochgeladene Dateien ({files.length})</span>
           </h2>
 
+          {caseData.status === "Archiviert" && (
+            <div className="p-4 bg-amber-50 border border-amber-100 text-amber-850 text-xs rounded-xl flex items-center gap-2.5 shadow-sm font-semibold animate-fade-in">
+              <AlertCircle className="w-5 h-5 shrink-0 text-amber-600" />
+              <span>Dieser Fall wurde archiviert. Alle hochgeladenen Dokumente und Bilder wurden zur Speicherplatzfreigabe gelöscht.</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* Scheckheft uploads */}
@@ -796,3 +802,23 @@ function FileCategoryCard({
     </div>
   );
 }
+
+const getCleanedWhatsAppNumber = (phone: string): string => {
+  let cleaned = phone.replace(/[^\d+]/g, "");
+  if (cleaned.startsWith("+")) {
+    cleaned = cleaned.substring(1);
+  } else if (cleaned.startsWith("00")) {
+    cleaned = cleaned.substring(2);
+  }
+  const prefixes = ["49", "43", "41", "33", "31", "32", "48", "420", "39", "34", "44"];
+  for (const prefix of prefixes) {
+    if (cleaned.startsWith(prefix + "0")) {
+      cleaned = prefix + cleaned.substring(prefix.length + 1);
+      break;
+    }
+  }
+  if (cleaned.startsWith("0")) {
+    cleaned = "49" + cleaned.substring(1);
+  }
+  return cleaned;
+};

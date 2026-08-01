@@ -1,6 +1,6 @@
 import { supabase } from "./supabaseClient";
 
-export type CaseStatus = "Gutachten" | "Rechtsanwalt" | "Abgeschlossen";
+export type CaseStatus = "Gutachten" | "Rechtsanwalt" | "Abgeschlossen" | "Archiviert";
 
 export interface User {
   id: string;
@@ -480,5 +480,85 @@ export async function markNotificationsAsRead(): Promise<void> {
 
   if (error) {
     throw new Error(error.message);
+  }
+}
+
+export async function deleteCase(caseId: string): Promise<void> {
+  // 1. List files under cases/caseId/ in storage
+  const { data: list, error: listError } = await supabase.storage
+    .from("case-files")
+    .list(`cases/${caseId}`);
+
+  if (listError) {
+    console.error("Fehler beim Auflisten der Dateien im Speicher:", listError.message);
+  }
+
+  // 2. Remove files from Supabase Storage bucket
+  if (list && list.length > 0) {
+    const paths = list.map(item => `cases/${caseId}/${item.name}`);
+    const { error: removeError } = await supabase.storage
+      .from("case-files")
+      .remove(paths);
+    if (removeError) {
+      console.error("Fehler beim Löschen der Dateien im Speicher:", removeError.message);
+    }
+  }
+
+  // 3. Delete case_files records from database
+  const { error: fileDeleteError } = await supabase
+    .from("case_files")
+    .delete()
+    .eq("case_id", caseId);
+  if (fileDeleteError) {
+    throw new Error(`Fehler beim Löschen der Fall-Dateien aus der Datenbank: ${fileDeleteError.message}`);
+  }
+
+  // 4. Delete the case itself from cases database table
+  const { error: caseDeleteError } = await supabase
+    .from("cases")
+    .delete()
+    .eq("id", caseId);
+  if (caseDeleteError) {
+    throw new Error(`Fehler beim Löschen des Falls aus der Datenbank: ${caseDeleteError.message}`);
+  }
+}
+
+export async function archiveCase(caseId: string): Promise<void> {
+  // 1. List files under cases/caseId/ in storage
+  const { data: list, error: listError } = await supabase.storage
+    .from("case-files")
+    .list(`cases/${caseId}`);
+
+  if (listError) {
+    console.error("Fehler beim Auflisten der Dateien im Speicher:", listError.message);
+  }
+
+  // 2. Remove files from Supabase Storage bucket
+  if (list && list.length > 0) {
+    const paths = list.map(item => `cases/${caseId}/${item.name}`);
+    const { error: removeError } = await supabase.storage
+      .from("case-files")
+      .remove(paths);
+    if (removeError) {
+      console.error("Fehler beim Löschen der Dateien im Speicher:", removeError.message);
+    }
+  }
+
+  // 3. Delete case_files records from database
+  const { error: fileDeleteError } = await supabase
+    .from("case_files")
+    .delete()
+    .eq("case_id", caseId);
+  if (fileDeleteError) {
+    throw new Error(`Fehler beim Löschen der Fall-Dateien aus der Datenbank: ${fileDeleteError.message}`);
+  }
+
+  // 4. Update the case status to 'Archiviert' in the cases table
+  const { error: statusUpdateError } = await supabase
+    .from("cases")
+    .update({ status: "Archiviert", updated_at: new Date().toISOString() })
+    .eq("id", caseId);
+  if (statusUpdateError) {
+    throw new Error(`Fehler beim Archivieren des Falls in der Datenbank: ${statusUpdateError.message}`);
   }
 }

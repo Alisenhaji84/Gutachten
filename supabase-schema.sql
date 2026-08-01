@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 CREATE TABLE IF NOT EXISTS public.cases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   license_plate TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'Gutachten' CHECK (status IN ('Gutachten', 'Rechtsanwalt', 'Abgeschlossen')),
+  status TEXT NOT NULL DEFAULT 'Gutachten' CHECK (status IN ('Gutachten', 'Rechtsanwalt', 'Abgeschlossen', 'Archiviert')),
   assistant_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   client_token TEXT NOT NULL UNIQUE,
   accident_location TEXT,
