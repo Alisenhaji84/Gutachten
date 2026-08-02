@@ -113,7 +113,11 @@ export async function loginUser(email: string, passwordString: string): Promise<
     email: email.trim().toLowerCase(),
     password: passwordString.trim(),
   });
-  if (error || !data.user) {
+  if (error) {
+    console.error("Supabase auth.signInWithPassword error:", error.message);
+    return null;
+  }
+  if (!data.user) {
     return null;
   }
   

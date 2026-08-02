@@ -35,6 +35,7 @@ export default function AdminLoginPage() {
         setError("Ungültige E-Mail-Adresse oder Passwort. Bitte versuchen Sie es erneut.");
       }
     } catch (err: any) {
+      console.error("Login exception:", err);
       setError("Ein Fehler ist aufgetreten. Bitte versuchen Sie es später noch einmal.");
     } finally {
       setLoading(false);
