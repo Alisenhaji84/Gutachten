@@ -649,51 +649,6 @@ export default function ClientPortalPage() {
                 </p>
               </div>
 
-              {/* Display submitted values summary */}
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4 text-sm text-slate-700">
-                <h4 className="font-bold text-slate-800 text-sm">Zusammenfassung Ihrer Angaben</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <p><span className="text-slate-400 text-xs block">E-Mail:</span> <span className="font-semibold">{email}</span></p>
-                  <p><span className="text-slate-400 text-xs block">Telefonnummer:</span> <span className="font-semibold">{phone}</span></p>
-                  <div>
-                    <span className="text-slate-400 text-xs block mb-1">Ihr Kennzeichen:</span>
-                    <div className="scale-85 origin-left">
-                      <LicensePlate plateNumber={licensePlate} />
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-xs block mb-1">Gegner. Kennzeichen:</span>
-                    <div className="scale-85 origin-left">
-                      <LicensePlate plateNumber={opponentPlate} />
-                    </div>
-                  </div>
-                  <p><span className="text-slate-400 text-xs block">Unfallort:</span> <span className="font-semibold">{accidentLocation}</span></p>
-                  <p><span className="text-slate-400 text-xs block">Unfalldatum:</span> <span className="font-semibold">{accidentDate}</span></p>
-                  <p><span className="text-slate-400 text-xs block">Gegnerische Versicherung:</span> <span className="font-semibold">{opponentInsuranceName}</span></p>
-                  <p><span className="text-slate-400 text-xs block">Versicherungsnummer:</span> <span className="font-semibold">{opponentInsuranceNumber}</span></p>
-                </div>
-              </div>
-
-              {/* List already uploaded files */}
-              {existingFiles.length > 0 && (
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-3">
-                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                    <FileCheck className="w-4 h-4 text-sky-500" />
-                    <span>Bereits hochgeladene Dateien ({existingFiles.length})</span>
-                  </h4>
-                  <ul className="space-y-2 text-xs">
-                    {existingFiles.map(f => (
-                      <li key={f.id} className="flex items-center justify-between bg-white border border-slate-100 p-2.5 rounded-xl shadow-inner font-mono text-slate-700">
-                        <span>{f.file_name}</span>
-                        <span className="text-[10px] text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full capitalize">
-                          {f.file_type === "scheckheft" ? "Scheckheft" : f.file_type === "accident_card" ? "Unfallkarte" : f.file_type === "accident_photos" ? "Foto" : "Zusatzdatei"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               {/* Standalone Document Dropzone in Summary View */}
               {caseData.status === "Gutachten" && (
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
@@ -753,7 +708,7 @@ export default function ClientPortalPage() {
               )}
 
               {canEditByStatus && !isEditing && (
-                <div className="py-1 mt-4">
+                <div className="py-1">
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
@@ -761,6 +716,51 @@ export default function ClientPortalPage() {
                   >
                     <span>✏️ Angaben & Dokumente bearbeiten</span>
                   </button>
+                </div>
+              )}
+
+              {/* Display submitted values summary */}
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4 text-sm text-slate-700">
+                <h4 className="font-bold text-slate-800 text-sm">Zusammenfassung Ihrer Angaben</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <p><span className="text-slate-400 text-xs block">E-Mail:</span> <span className="font-semibold">{email}</span></p>
+                  <p><span className="text-slate-400 text-xs block">Telefonnummer:</span> <span className="font-semibold">{phone}</span></p>
+                  <div>
+                    <span className="text-slate-400 text-xs block mb-1">Ihr Kennzeichen:</span>
+                    <div className="scale-85 origin-left">
+                      <LicensePlate plateNumber={licensePlate} />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-xs block mb-1">Gegner. Kennzeichen:</span>
+                    <div className="scale-85 origin-left">
+                      <LicensePlate plateNumber={opponentPlate} />
+                    </div>
+                  </div>
+                  <p><span className="text-slate-400 text-xs block">Unfallort:</span> <span className="font-semibold">{accidentLocation}</span></p>
+                  <p><span className="text-slate-400 text-xs block">Unfalldatum:</span> <span className="font-semibold">{accidentDate}</span></p>
+                  <p><span className="text-slate-400 text-xs block">Gegnerische Versicherung:</span> <span className="font-semibold">{opponentInsuranceName}</span></p>
+                  <p><span className="text-slate-400 text-xs block">Versicherungsnummer:</span> <span className="font-semibold">{opponentInsuranceNumber}</span></p>
+                </div>
+              </div>
+
+              {/* List already uploaded files */}
+              {existingFiles.length > 0 && (
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-3">
+                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                    <FileCheck className="w-4 h-4 text-sky-500" />
+                    <span>Bereits hochgeladene Dateien ({existingFiles.length})</span>
+                  </h4>
+                  <ul className="space-y-2 text-xs">
+                    {existingFiles.map(f => (
+                      <li key={f.id} className="flex items-center justify-between bg-white border border-slate-100 p-2.5 rounded-xl shadow-inner font-mono text-slate-700">
+                        <span>{f.file_name}</span>
+                        <span className="text-[10px] text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full capitalize">
+                          {f.file_type === "scheckheft" ? "Scheckheft" : f.file_type === "accident_card" ? "Unfallkarte" : f.file_type === "accident_photos" ? "Foto" : "Zusatzdatei"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
