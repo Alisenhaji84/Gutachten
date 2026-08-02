@@ -449,10 +449,8 @@ export default function ClientPortalPage() {
     }
   };
 
-  // Handle client uploading additional files later
-  const handleAdditionalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || !caseData) return;
+  const uploadFilesList = async (files: FileList | File[]) => {
+    if (!files || files.length === 0 || !caseData) return;
     setRevisitUploadLoading(true);
     setRevisitFileMsg("");
 
@@ -482,6 +480,21 @@ export default function ClientPortalPage() {
       setRevisitFileMsg(`Fehler beim Upload: ${err.message || err}`);
     } finally {
       setRevisitUploadLoading(false);
+    }
+  };
+
+  // Handle client uploading additional files later
+  const handleAdditionalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      await uploadFilesList(e.target.files);
+    }
+  };
+
+  // Handle drop on summary uploader card
+  const handleSummaryFileDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files) {
+      await uploadFilesList(e.dataTransfer.files);
     }
   };
 
@@ -690,6 +703,64 @@ export default function ClientPortalPage() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Standalone Document Dropzone in Summary View */}
+              {caseData.status === "Gutachten" && (
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                  <div>
+                    <h4 className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-sky-500" />
+                      <span>Dokument vergessen? Weitere Dateien hochladen</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Laden Sie hier jederzeit zusätzliche Fotos, PDF-Dokumente oder Gutachten-Unterlagen hoch, ohne Ihre Angaben ändern zu müssen.
+                    </p>
+                  </div>
+
+                  <div 
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleSummaryFileDrop}
+                    className="border-2 border-dashed border-slate-200 hover:border-sky-500 hover:bg-sky-50/10 rounded-2xl p-6 text-center cursor-pointer transition-all uploader-box relative"
+                  >
+                    <input
+                      type="file"
+                      id="summary-revisit-upload"
+                      multiple
+                      onChange={handleAdditionalUpload}
+                      className="hidden"
+                      disabled={revisitUploadLoading}
+                    />
+                    <label htmlFor="summary-revisit-upload" className="cursor-pointer block">
+                      <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <span className="text-sm font-semibold text-slate-700 block">
+                        Ziehen Sie Ihre Dateien per Drag & Drop hierher
+                      </span>
+                      <span className="text-xs text-slate-400 block my-1">——— oder ———</span>
+                      <span className="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg inline-block font-semibold transition-colors mt-1">
+                        Nach Dateien suchen
+                      </span>
+                      <span className="text-[10px] text-slate-400 mt-2 block">Größenlimit: 100.0 Mb</span>
+                    </label>
+                  </div>
+
+                  {revisitUploadLoading && (
+                    <div className="text-xs text-sky-500 animate-pulse flex items-center justify-center gap-1.5 font-semibold py-1">
+                      <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+                      <span>Dateien werden hochgeladen... Bitte warten.</span>
+                    </div>
+                  )}
+
+                  {revisitFileMsg && (
+                    <div className={`p-3 rounded-xl text-xs border ${
+                      revisitFileMsg.startsWith("Fehler") 
+                        ? "bg-red-50 border-red-150 text-red-700" 
+                        : "bg-emerald-50 border-emerald-150 text-emerald-700 font-semibold"
+                    }`}>
+                      {revisitFileMsg}
+                    </div>
+                  )}
                 </div>
               )}
 
