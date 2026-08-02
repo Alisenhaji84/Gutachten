@@ -692,17 +692,7 @@ export default function ClientPortalPage() {
                   </ul>
                 </div>
               )}
-              {canEditByStatus && !isEditing && (
-                <div className="py-2 mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="w-full bg-sky-500 hover:bg-sky-600 text-white font-extrabold px-6 py-4 rounded-xl shadow-lg hover:shadow-sky-500/25 transition-all active:scale-[0.98] cursor-pointer text-center text-sm flex items-center justify-center gap-2 select-none"
-                  >
-                    <span>✏️ Angaben & Dokumente bearbeiten</span>
-                  </button>
-                </div>
-              )}
+
             </div>
           ) : (
             /* Interactive Form state */
