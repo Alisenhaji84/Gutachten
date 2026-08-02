@@ -636,6 +636,18 @@ export default function ClientPortalPage() {
                 </p>
               </div>
 
+              {canEditByStatus && !isEditing && (
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="w-full bg-sky-500 hover:bg-sky-600 text-white font-extrabold px-6 py-4 rounded-2xl shadow-lg hover:shadow-sky-500/25 transition-all active:scale-[0.98] cursor-pointer text-center text-sm flex items-center justify-center gap-2 select-none"
+                  >
+                    <span>✏️ Angaben & Dokumente bearbeiten</span>
+                  </button>
+                </div>
+              )}
+
               {/* Display submitted values summary */}
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4 text-sm text-slate-700">
                 <h4 className="font-bold text-slate-800 text-sm">Zusammenfassung Ihrer Angaben</h4>
@@ -680,6 +692,17 @@ export default function ClientPortalPage() {
                   </ul>
                 </div>
               )}
+              {canEditByStatus && !isEditing && (
+                <div className="py-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="w-full bg-sky-500 hover:bg-sky-600 text-white font-extrabold px-6 py-4 rounded-xl shadow-lg hover:shadow-sky-500/25 transition-all active:scale-[0.98] cursor-pointer text-center text-sm flex items-center justify-center gap-2 select-none"
+                  >
+                    <span>✏️ Angaben & Dokumente bearbeiten</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             /* Interactive Form state */
@@ -695,17 +718,7 @@ export default function ClientPortalPage() {
                 </div>
               )}
 
-              {submitted && canEditByStatus && !isEditing && (
-                <div className="flex justify-end relative z-10 pl-0 sm:pl-14 pb-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer text-xs select-none"
-                  >
-                    <span>✏️ Angaben bearbeiten</span>
-                  </button>
-                </div>
-              )}
+
 
               <fieldset disabled={isReadOnly} className="space-y-12 w-full">
 
@@ -1249,15 +1262,7 @@ export default function ClientPortalPage() {
 
             {/* Step 16: Actions */}
             <div className="pt-6 relative pl-0 sm:pl-14 flex flex-wrap items-center gap-4 justify-center sm:justify-start">
-              {submitted && canEditByStatus && !isEditing && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  className="bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold px-8 py-3.5 rounded-full transition-all shadow-md active:scale-95 cursor-pointer select-none"
-                >
-                  ✏️ Angaben bearbeiten
-                </button>
-              )}
+
 
               {isEditing && (
                 <>
