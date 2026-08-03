@@ -313,10 +313,46 @@ export async function updateCaseClientData(token: string, clientData: Partial<Ca
 }
 
 export async function updateCase(id: string, updateData: Partial<Case>, role?: string): Promise<Case> {
+  const cleanUpdateData = { ...updateData };
+
+  if (role === "admin" || role === "assistant") {
+    // Strip signature fields for admins and assistants
+    delete cleanUpdateData.signature;
+    delete cleanUpdateData.signature_url;
+
+    // Check if any client or case fields are being updated
+    const metadataFields = ["status", "assistant_id", "assistant_payout", "updated_at"];
+    const isUpdatingClientOrCaseInfo = Object.keys(cleanUpdateData).some(
+      (key) => !metadataFields.includes(key)
+    );
+
+    if (isUpdatingClientOrCaseInfo) {
+      // Fetch current case status from database
+      const { data: currentCase, error: fetchError } = await supabase
+        .from("cases")
+        .select("status")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) {
+        throw new Error(fetchError.message);
+      }
+      if (!currentCase) {
+        throw new Error("Fall nicht gefunden.");
+      }
+
+      if (currentCase.status !== "Gutachten") {
+        throw new Error(
+          "Daten können nicht mehr geändert werden, da der Fall bereits an den Anwalt übergeben wurde."
+        );
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("cases")
     .update({
-      ...updateData,
+      ...cleanUpdateData,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

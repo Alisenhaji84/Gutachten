@@ -62,6 +62,22 @@ export default function CaseDetailPage() {
   const [copiedLocation, setCopiedLocation] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Edit fields state
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editClientEmail, setEditClientEmail] = useState("");
+  const [editClientPhone, setEditClientPhone] = useState("");
+  const [editLicensePlate, setEditLicensePlate] = useState("");
+  const [editOpponentLicensePlate, setEditOpponentLicensePlate] = useState("");
+  const [editAccidentLocation, setEditAccidentLocation] = useState("");
+  const [editAccidentDate, setEditAccidentDate] = useState("");
+  const [editDamageNumber, setEditDamageNumber] = useState("");
+  const [editOpponentInsuranceName, setEditOpponentInsuranceName] = useState("");
+  const [editOpponentInsuranceNumber, setEditOpponentInsuranceNumber] = useState("");
+  const [editIsScheckheftMaintained, setEditIsScheckheftMaintained] = useState("");
+  const [editIsAccidentCardPresent, setEditIsAccidentCardPresent] = useState("");
+  const [editIban, setEditIban] = useState("");
+  const [editOpposingInsuranceContacted, setEditOpposingInsuranceContacted] = useState(false);
+
   const handleCopyEmail = () => {
     if (caseData?.client_email) {
       navigator.clipboard.writeText(caseData.client_email);
@@ -103,6 +119,21 @@ export default function CaseDetailPage() {
       setSelectedStatus(data.status);
       setSelectedAssistantId(data.assistant_id || "");
       setAssistantPayout(data.assistant_payout?.toString() || "0");
+
+      // Initialize edit fields
+      setEditClientEmail(data.client_email || "");
+      setEditClientPhone(data.client_phone || "");
+      setEditLicensePlate(data.license_plate || "");
+      setEditOpponentLicensePlate(data.opponent_license_plate || "");
+      setEditAccidentLocation(data.accident_location || "");
+      setEditAccidentDate(data.accident_date || "");
+      setEditDamageNumber(data.damage_number || "");
+      setEditOpponentInsuranceName(data.opponent_insurance_name || "");
+      setEditOpponentInsuranceNumber(data.opponent_insurance_number || "");
+      setEditIsScheckheftMaintained(data.is_scheckheft_maintained || "");
+      setEditIsAccidentCardPresent(data.is_accident_card_present || "");
+      setEditIban(data.iban || "");
+      setEditOpposingInsuranceContacted(data.opposing_insurance_contacted || false);
 
       const list = await getFilesForCase(caseId);
       setFiles(list);
@@ -152,6 +183,58 @@ export default function CaseDetailPage() {
       console.error(err);
       setErrorMsg("Fehler beim Aktualisieren des Falls.");
     }
+  };
+
+  const handleUpdateDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    setSuccessMsg("");
+    setErrorMsg("");
+
+    try {
+      await updateCase(caseId, {
+        client_email: editClientEmail,
+        client_phone: editClientPhone,
+        license_plate: editLicensePlate,
+        opponent_license_plate: editOpponentLicensePlate,
+        accident_location: editAccidentLocation,
+        accident_date: editAccidentDate,
+        damage_number: editDamageNumber,
+        opponent_insurance_name: editOpponentInsuranceName,
+        opponent_insurance_number: editOpponentInsuranceNumber,
+        is_scheckheft_maintained: editIsScheckheftMaintained,
+        is_accident_card_present: editIsAccidentCardPresent,
+        iban: editIban,
+        opposing_insurance_contacted: editOpposingInsuranceContacted,
+      }, currentUser.role);
+
+      setSuccessMsg("Kunden- und Unfalldetails erfolgreich aktualisiert!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+      setIsEditingDetails(false);
+      fetchCaseDetails(currentUser);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg("Fehler beim Aktualisieren der Details: " + (err.message || err));
+    }
+  };
+
+  const handleCancelEditing = () => {
+    if (caseData) {
+      setEditClientEmail(caseData.client_email || "");
+      setEditClientPhone(caseData.client_phone || "");
+      setEditLicensePlate(caseData.license_plate || "");
+      setEditOpponentLicensePlate(caseData.opponent_license_plate || "");
+      setEditAccidentLocation(caseData.accident_location || "");
+      setEditAccidentDate(caseData.accident_date || "");
+      setEditDamageNumber(caseData.damage_number || "");
+      setEditOpponentInsuranceName(caseData.opponent_insurance_name || "");
+      setEditOpponentInsuranceNumber(caseData.opponent_insurance_number || "");
+      setEditIsScheckheftMaintained(caseData.is_scheckheft_maintained || "");
+      setEditIsAccidentCardPresent(caseData.is_accident_card_present || "");
+      setEditIban(caseData.iban || "");
+      setEditOpposingInsuranceContacted(caseData.opposing_insurance_contacted || false);
+    }
+    setIsEditingDetails(false);
   };
 
   // Read upload files
@@ -284,11 +367,32 @@ export default function CaseDetailPage() {
                 <FileText className="w-5 h-5 text-sky-500" />
                 <span>Schadensmeldung des Kunden</span>
               </h2>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                hasClientSubmitted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-              }`}>
-                {hasClientSubmitted ? 'Ausgefüllt' : 'Wartet auf Angaben'}
-              </span>
+              <div className="flex items-center gap-3">
+                {caseData.status !== "Gutachten" ? (
+                  <span className="bg-rose-50 border border-rose-100 text-rose-700 px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Bearbeitung gesperrt: Fall beim Anwalt</span>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (isEditingDetails) {
+                        handleCancelEditing();
+                      } else {
+                        setIsEditingDetails(true);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 bg-sky-50 border border-sky-100 hover:bg-sky-100 text-sky-600 font-bold px-4 py-1.5 rounded-xl text-xs transition-colors cursor-pointer select-none"
+                  >
+                    <span>{isEditingDetails ? "Abbrechen" : "✏️ Bearbeiten"}</span>
+                  </button>
+                )}
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  hasClientSubmitted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {hasClientSubmitted ? 'Ausgefüllt' : 'Wartet auf Angaben'}
+                </span>
+              </div>
             </div>
 
             {!hasClientSubmitted ? (
@@ -314,6 +418,210 @@ export default function CaseDetailPage() {
                   </a>
                 </div>
               </div>
+            ) : isEditingDetails ? (
+              <form onSubmit={handleUpdateDetails} className="space-y-6 animate-fade-in text-sm text-slate-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Kundenkontakt */}
+                  <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Kundenkontakt</h3>
+                    
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-600">E-Mail-Adresse</label>
+                      <input
+                        type="email"
+                        value={editClientEmail}
+                        onChange={(e) => setEditClientEmail(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                        placeholder="beispiel@mail.de"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-600">Telefonnummer</label>
+                      <input
+                        type="tel"
+                        value={editClientPhone}
+                        onChange={(e) => setEditClientPhone(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                        placeholder="+49 170 1234567"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-600">Eigenes Kennzeichen</label>
+                      <input
+                        type="text"
+                        value={editLicensePlate}
+                        onChange={(e) => setEditLicensePlate(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                        placeholder="LB-XX 123"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Unfalldetails */}
+                  <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Unfalldetails</h3>
+                    
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-600">Unfallort</label>
+                      <input
+                        type="text"
+                        value={editAccidentLocation}
+                        onChange={(e) => setEditAccidentLocation(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                        placeholder="Ludwigsburg Hauptplatz"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-600">Unfalldatum</label>
+                      <input
+                        type="date"
+                        value={editAccidentDate}
+                        onChange={(e) => setEditAccidentDate(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-600">Gegner. Kennzeichen</label>
+                      <input
+                        type="text"
+                        value={editOpponentLicensePlate}
+                        onChange={(e) => setEditOpponentLicensePlate(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                        placeholder="S-YY 987"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Versicherungsdaten */}
+                  <div className="md:col-span-2 space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Versicherungsdaten des Gegners</h3>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-slate-600">Schadennummer</label>
+                        <input
+                          type="text"
+                          value={editDamageNumber}
+                          onChange={(e) => setEditDamageNumber(e.target.value)}
+                          className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                          placeholder="SCH-4929"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-slate-600">Versicherung Name</label>
+                        <input
+                          type="text"
+                          value={editOpponentInsuranceName}
+                          onChange={(e) => setEditOpponentInsuranceName(e.target.value)}
+                          className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                          placeholder="Allianz"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-slate-600">Versicherungsnummer</label>
+                        <input
+                          type="text"
+                          value={editOpponentInsuranceNumber}
+                          onChange={(e) => setEditOpponentInsuranceNumber(e.target.value)}
+                          className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors"
+                          placeholder="V-938102"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Zusatzdaten & Finanzen */}
+                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Scheckheftgepflegt?</label>
+                      <select
+                        value={editIsScheckheftMaintained}
+                        onChange={(e) => setEditIsScheckheftMaintained(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors cursor-pointer"
+                      >
+                        <option value="">Nicht angegeben</option>
+                        <option value="Ja">Ja</option>
+                        <option value="Nein">Nein</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Unfallkarte vorhanden?</label>
+                      <select
+                        value={editIsAccidentCardPresent}
+                        onChange={(e) => setEditIsAccidentCardPresent(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors cursor-pointer"
+                      >
+                        <option value="">Nicht angegeben</option>
+                        <option value="Ja">Ja</option>
+                        <option value="Nein">Nein</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <label className="block text-xs font-bold text-slate-600 mb-1">IBAN für Auszahlung</label>
+                      <input
+                        type="text"
+                        value={editIban}
+                        onChange={(e) => setEditIban(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-xl px-3 py-2 outline-none transition-colors font-mono"
+                        placeholder="DE89..."
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <input
+                        type="checkbox"
+                        id="editOpposingInsuranceContacted"
+                        checked={editOpposingInsuranceContacted}
+                        onChange={(e) => setEditOpposingInsuranceContacted(e.target.checked)}
+                        className="w-4 h-4 text-sky-600 border-slate-200 rounded focus:ring-sky-500 cursor-pointer"
+                      />
+                      <label htmlFor="editOpposingInsuranceContacted" className="text-xs font-bold text-slate-600 cursor-pointer select-none">
+                        Gegnerische Versicherung kontaktiert?
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Signature Read-only Preview (Strictly static, signature is never editable!) */}
+                  {caseData.signature_url && (
+                    <div className="md:col-span-2 border border-slate-100 rounded-xl p-4 bg-slate-50/40">
+                      <span className="text-xs font-semibold text-slate-400 block mb-2">Digitale Unterschrift des Kunden (Schreibgeschützt)</span>
+                      <div className="bg-white border border-slate-200 rounded-lg p-2 max-w-sm">
+                        <img 
+                          src={caseData.signature_url} 
+                          alt="Unterschrift des Kunden" 
+                          className="w-full max-h-36 object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={handleCancelEditing}
+                    className="bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold px-6 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer select-none"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-[#38bdf8] hover:bg-[#0ea5e9] text-white font-extrabold px-8 py-2.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer select-none"
+                  >
+                    Speichern
+                  </button>
+                </div>
+              </form>
             ) : (
               /* Case Details Grid */
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
