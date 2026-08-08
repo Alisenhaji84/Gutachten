@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.cases (
   is_scheckheft_maintained TEXT,
   is_accident_card_present TEXT,
   assistant_payout NUMERIC DEFAULT 0,
+  assistant_payout_paid BOOLEAN DEFAULT FALSE,
   iban TEXT,
   opposing_insurance_contacted BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT now(),

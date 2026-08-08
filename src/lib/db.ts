@@ -40,6 +40,7 @@ export interface Case {
   is_scheckheft_maintained?: string;
   is_accident_card_present?: string;
   assistant_payout?: number;
+  assistant_payout_paid?: boolean;
   iban?: string;
   opposing_insurance_contacted?: boolean;
 }
@@ -321,7 +322,7 @@ export async function updateCase(id: string, updateData: Partial<Case>, role?: s
     delete cleanUpdateData.signature_url;
 
     // Check if any client or case fields are being updated
-    const metadataFields = ["status", "assistant_id", "assistant_payout", "updated_at"];
+    const metadataFields = ["status", "assistant_id", "assistant_payout", "assistant_payout_paid", "updated_at"];
     const isUpdatingClientOrCaseInfo = Object.keys(cleanUpdateData).some(
       (key) => !metadataFields.includes(key)
     );
