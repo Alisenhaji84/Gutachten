@@ -111,13 +111,13 @@ export default function CaseDetailPage() {
     fetchCaseDetails(user);
   }, [caseId, router]);
 
-  const fetchCaseDetails = async (user: User) => {
-    setLoading(true);
+  const fetchCaseDetails = async (user: User, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getCaseById(caseId, user);
       if (!data) {
         setErrorMsg("Fall nicht gefunden oder kein Zugriff.");
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
       setCaseData(data);
@@ -152,7 +152,7 @@ export default function CaseDetailPage() {
       console.error(err);
       setErrorMsg("Fehler beim Laden des Falls.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -185,11 +185,11 @@ export default function CaseDetailPage() {
       setSuccessMsg("Änderungen erfolgreich gespeichert!");
       setTimeout(() => setSuccessMsg(""), 3000);
       
-      // Refresh details
-      fetchCaseDetails(currentUser);
-    } catch (err) {
+      // Refresh details silently (avoids full-page loading flicker)
+      fetchCaseDetails(currentUser, true);
+    } catch (err: any) {
       console.error(err);
-      setErrorMsg("Fehler beim Aktualisieren des Falls.");
+      setErrorMsg("Fehler beim Aktualisieren: " + (err.message || err) + ". Bitte stellen Sie sicher, dass Sie folgenden SQL-Befehl im Supabase Dashboard SQL Editor ausgeführt haben: ALTER TABLE public.cases ADD COLUMN IF NOT EXISTS assistant_payout_paid BOOLEAN DEFAULT FALSE;");
     }
   };
 
