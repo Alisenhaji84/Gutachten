@@ -61,6 +61,10 @@ export default function CaseDetailPage() {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedLocation, setCopiedLocation] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewFileName, setPreviewFileName] = useState<string>("");
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   // Edit fields state
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -235,6 +239,73 @@ export default function CaseDetailPage() {
       setEditOpposingInsuranceContacted(caseData.opposing_insurance_contacted || false);
     }
     setIsEditingDetails(false);
+  };
+
+  const handlePreviewFile = (fileUrl: string, fileName: string) => {
+    setPreviewImage(fileUrl);
+    setPreviewFileName(fileName);
+  };
+
+  const handleDownloadDirect = async (url: string, fileName: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Direct download failed:", error);
+      // Fallback
+      window.open(url, "_blank");
+    }
+  };
+
+  const handleToggleSelectFile = (fileId: string) => {
+    setSelectedFileIds(prev => 
+      prev.includes(fileId) 
+        ? prev.filter(id => id !== fileId) 
+        : [...prev, fileId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedFileIds.length === files.length) {
+      setSelectedFileIds([]);
+    } else {
+      setSelectedFileIds(files.map(f => f.id));
+    }
+  };
+
+  const handleDownloadSelected = async () => {
+    const filesToDownload = files.filter(f => selectedFileIds.includes(f.id));
+    if (filesToDownload.length === 0) return;
+
+    setBulkDownloading(true);
+    setDownloadProgress(0);
+    
+    try {
+      let progress = 0;
+      for (const file of filesToDownload) {
+        await handleDownloadDirect(file.file_url, file.file_name);
+        progress++;
+        setDownloadProgress(progress);
+        // Brief delay to prevent browser download congestion
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      setSuccessMsg("Ausgewählte Dateien erfolgreich heruntergeladen!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg("Fehler beim Herunterladen der Dateien.");
+    } finally {
+      setBulkDownloading(false);
+      setDownloadProgress(0);
+    }
   };
 
   // Read upload files
@@ -937,10 +1008,38 @@ export default function CaseDetailPage() {
 
         {/* Uploaded Documents Grid (Full Width) */}
         <section className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-4">
-            <FileCheck className="w-5 h-5 text-sky-500" />
-            <span>Hochgeladene Dateien ({files.length})</span>
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <FileCheck className="w-5 h-5 text-sky-500" />
+              <span>Hochgeladene Dateien ({files.length})</span>
+            </h2>
+            
+            {files.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSelectAll}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all cursor-pointer select-none"
+                >
+                  {selectedFileIds.length === files.length ? "Auswahl aufheben" : "Alle auswählen"}
+                </button>
+                
+                <button
+                  onClick={handleDownloadSelected}
+                  disabled={selectedFileIds.length === 0 || bulkDownloading}
+                  className={`flex items-center gap-1.5 font-bold px-4 py-2 rounded-xl text-xs transition-all select-none cursor-pointer ${
+                    selectedFileIds.length === 0 
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200" 
+                      : "bg-sky-500 hover:bg-sky-600 text-white shadow-md hover:shadow-sky-500/25"
+                  }`}
+                >
+                  <Download className="w-4 h-4" />
+                  {bulkDownloading 
+                    ? `Herunterladen... (${downloadProgress}/${selectedFileIds.length})` 
+                    : `Ausgewählte herunterladen (${selectedFileIds.length})`}
+                </button>
+              </div>
+            )}
+          </div>
 
           {caseData.status === "Archiviert" && (
             <div className="p-4 bg-amber-50 border border-amber-100 text-amber-850 text-xs rounded-xl flex items-center gap-2.5 shadow-sm font-semibold animate-fade-in">
@@ -956,7 +1055,10 @@ export default function CaseDetailPage() {
               title="Scheckheft" 
               files={scheckheftFiles} 
               icon={<FileText className="w-5 h-5 text-sky-600" />} 
-              onPreviewImage={setPreviewImage}
+              onPreviewFile={handlePreviewFile}
+              selectedFileIds={selectedFileIds}
+              onToggleSelectFile={handleToggleSelectFile}
+              onDownloadDirect={handleDownloadDirect}
             />
 
             {/* Unfallkarte uploads */}
@@ -964,7 +1066,10 @@ export default function CaseDetailPage() {
               title="Unfallkarte" 
               files={accidentCardFiles} 
               icon={<FileText className="w-5 h-5 text-sky-600" />} 
-              onPreviewImage={setPreviewImage}
+              onPreviewFile={handlePreviewFile}
+              selectedFileIds={selectedFileIds}
+              onToggleSelectFile={handleToggleSelectFile}
+              onDownloadDirect={handleDownloadDirect}
             />
 
             {/* Photos uploads */}
@@ -972,7 +1077,10 @@ export default function CaseDetailPage() {
               title="Fotos vom Unfallort" 
               files={photoFiles} 
               icon={<ImageIcon className="w-5 h-5 text-sky-600" />} 
-              onPreviewImage={setPreviewImage}
+              onPreviewFile={handlePreviewFile}
+              selectedFileIds={selectedFileIds}
+              onToggleSelectFile={handleToggleSelectFile}
+              onDownloadDirect={handleDownloadDirect}
             />
 
             {/* Additional files */}
@@ -980,7 +1088,10 @@ export default function CaseDetailPage() {
               title="Sonstige Dokumente (Intern)" 
               files={additionalFiles} 
               icon={<FileText className="w-5 h-5 text-sky-600" />} 
-              onPreviewImage={setPreviewImage}
+              onPreviewFile={handlePreviewFile}
+              selectedFileIds={selectedFileIds}
+              onToggleSelectFile={handleToggleSelectFile}
+              onDownloadDirect={handleDownloadDirect}
             />
 
           </div>
@@ -992,7 +1103,10 @@ export default function CaseDetailPage() {
       {previewImage && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4"
-          onClick={() => setPreviewImage(null)}
+          onClick={() => {
+            setPreviewImage(null);
+            setPreviewFileName("");
+          }}
         >
           <div 
             className="relative max-w-4xl w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-800"
@@ -1000,9 +1114,12 @@ export default function CaseDetailPage() {
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/20">
-              <span className="text-sm font-semibold text-slate-300">Bildvorschau</span>
+              <span className="text-sm font-semibold text-slate-350 truncate pr-4">{previewFileName || "Bildvorschau"}</span>
               <button
-                onClick={() => setPreviewImage(null)}
+                onClick={() => {
+                  setPreviewImage(null);
+                  setPreviewFileName("");
+                }}
                 className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer text-lg font-bold"
               >
                 &times;
@@ -1018,16 +1135,18 @@ export default function CaseDetailPage() {
             </div>
             {/* Footer */}
             <div className="flex justify-end gap-3 p-4 border-t border-slate-800 bg-slate-950/20">
-              <a
-                href={previewImage}
-                download
-                className="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+              <button
+                onClick={() => handleDownloadDirect(previewImage, previewFileName || "image.png")}
+                className="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer select-none"
               >
                 <Download className="w-4 h-4" />
                 Herunterladen
-              </a>
+              </button>
               <button
-                onClick={() => setPreviewImage(null)}
+                onClick={() => {
+                  setPreviewImage(null);
+                  setPreviewFileName("");
+                }}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Schließen
@@ -1051,12 +1170,18 @@ function FileCategoryCard({
   title, 
   files, 
   icon,
-  onPreviewImage
+  onPreviewFile,
+  selectedFileIds,
+  onToggleSelectFile,
+  onDownloadDirect
 }: { 
   title: string; 
   files: CaseFile[]; 
   icon: React.ReactNode;
-  onPreviewImage: (url: string) => void;
+  onPreviewFile: (url: string, name: string) => void;
+  selectedFileIds: string[];
+  onToggleSelectFile: (fileId: string) => void;
+  onDownloadDirect: (url: string, name: string) => void;
 }) {
   return (
     <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
@@ -1075,9 +1200,15 @@ function FileCategoryCard({
               className="flex items-center justify-between bg-white border border-slate-100 rounded-lg p-2 text-xs shadow-inner"
             >
               <div className="flex items-center flex-1 min-w-0 mr-2">
+                <input
+                  type="checkbox"
+                  checked={selectedFileIds.includes(f.id)}
+                  onChange={() => onToggleSelectFile(f.id)}
+                  className="mr-2 w-4 h-4 rounded border-slate-200 text-sky-500 focus:ring-sky-500 cursor-pointer shrink-0"
+                />
                 {isImageFile(f.file_name) && (
                   <div 
-                    onClick={() => onPreviewImage(f.file_url)}
+                    onClick={() => onPreviewFile(f.file_url, f.file_name)}
                     className="w-12 h-12 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 mr-2.5 cursor-pointer hover:opacity-90 hover:border-sky-400 transition-all select-none"
                     title="Vorschau anzeigen"
                   >
@@ -1096,21 +1227,22 @@ function FileCategoryCard({
               <div className="flex items-center gap-1.5 shrink-0">
                 {isImageFile(f.file_name) && (
                   <button
-                    onClick={() => onPreviewImage(f.file_url)}
+                    type="button"
+                    onClick={() => onPreviewFile(f.file_url, f.file_name)}
                     className="p-1.5 bg-slate-100 hover:bg-slate-200 hover:text-sky-600 rounded-md transition-colors text-slate-500 cursor-pointer select-none"
                     title="Vorschau"
                   >
                     <Eye className="w-3.5 h-3.5" />
                   </button>
                 )}
-                <a 
-                  href={f.file_url} 
-                  download={f.file_name} 
+                <button 
+                  type="button"
+                  onClick={() => onDownloadDirect(f.file_url, f.file_name)}
                   className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors text-slate-650 cursor-pointer select-none"
                   title="Herunterladen"
                 >
                   <Download className="w-3.5 h-3.5" />
-                </a>
+                </button>
               </div>
             </li>
           ))}
