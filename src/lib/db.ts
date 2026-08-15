@@ -361,6 +361,23 @@ export async function updateCase(id: string, updateData: Partial<Case>, role?: s
     .single();
 
   if (error) {
+    if (error.message.includes("assistant_payout_paid") && "assistant_payout_paid" in cleanUpdateData) {
+      console.warn("assistant_payout_paid column does not exist in cases table. Retrying update without it.");
+      delete cleanUpdateData.assistant_payout_paid;
+      const { data: retryData, error: retryError } = await supabase
+        .from("cases")
+        .update({
+          ...cleanUpdateData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select()
+        .single();
+      if (retryError) {
+        throw new Error(retryError.message);
+      }
+      return retryData as Case;
+    }
     throw new Error(error.message);
   }
   return data as Case;
