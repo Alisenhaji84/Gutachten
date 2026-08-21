@@ -7,7 +7,11 @@ export async function POST(request: Request) {
 
     const resendApiKey = process.env.RESEND_API_KEY;
     const adminEmail = process.env.ADMIN_EMAIL || "bouizem.design@gmail.com";
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    
+    // Dynamically build host-based URL fallback to ensure links work on production and local dev
+    const host = request.headers.get("host") || "app.kfz-gutachten-ludwigsburg.de";
+    const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
 
     if (!resendApiKey) {
       console.warn("[Resend] API Key is missing. Skipping email dispatch.");
