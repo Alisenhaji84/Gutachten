@@ -1133,6 +1133,12 @@ export default function CaseDetailPage() {
 
       </main>
 
+      {/* Dashboard Footer */}
+      <footer className="w-full py-6 mt-12 border-t border-slate-200 bg-slate-50 text-center text-xs text-slate-500">
+        Mit Präzision gebaut von <a href="https://pixzo.de/" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:text-sky-400 transition-colors font-semibold">Pixzo</a>
+      </footer>
+
+
       {/* Image Preview Lightbox Modal */}
       {previewImage && (
         <div 

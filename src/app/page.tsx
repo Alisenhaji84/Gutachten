@@ -70,6 +70,11 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Footer Credits */}
+        <div className="mt-16 text-center text-xs text-slate-500 pb-8">
+          Mit Präzision gebaut von <a href="https://pixzo.de/" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 transition-colors">Pixzo</a>
+        </div>
+
       </div>
     </main>
   );

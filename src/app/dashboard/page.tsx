@@ -642,6 +642,12 @@ export default function DashboardPage() {
         </div>
       </main>
 
+      {/* Dashboard Footer */}
+      <footer className="w-full py-6 mt-auto border-t border-slate-200 bg-slate-50 text-center text-xs text-slate-500">
+        Mit Präzision gebaut von <a href="https://pixzo.de/" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:text-sky-400 transition-colors font-semibold">Pixzo</a>
+      </footer>
+
+
       {/* Case Creation & QR Code Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">

@@ -117,6 +117,12 @@ export default function AdminLoginPage() {
           </form>
         </div>
       </div>
+
+      {/* Footer Credits */}
+      <div className="absolute bottom-8 w-full text-center text-xs text-slate-500">
+        Mit Präzision gebaut von <a href="https://pixzo.de/" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 transition-colors">Pixzo</a>
+      </div>
+
     </main>
   );
 }
