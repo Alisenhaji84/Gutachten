@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     } = body;
 
     const resendApiKey = process.env.RESEND_API_KEY;
-    const adminEmailRaw = process.env.ADMIN_EMAIL || "bouizem.design@gmail.com";
+    const adminEmailRaw = process.env.ADMIN_EMAIL || "info@kfz-gutachten-ludwigsburg.de";
     const fromEmail = process.env.RESEND_FROM_EMAIL || "KFZ-Gutachten System <onboarding@resend.dev>";
 
     // Parse one or multiple recipients (separated by comma)
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       .map((e) => e.trim())
       .filter(Boolean);
 
-    const toRecipients = recipients.length > 1 ? recipients : (recipients[0] || "bouizem.design@gmail.com");
+    const toRecipients = recipients.length > 1 ? recipients : (recipients[0] || "info@kfz-gutachten-ludwigsburg.de");
 
     // Dynamically build host-based URL fallback to ensure links work on production and local dev
     const host = request.headers.get("host") || "app.kfz-gutachten-ludwigsburg.de";
@@ -228,12 +228,27 @@ export async function POST(request: Request) {
 
     console.log(`[Resend] Dispatching form alert (${type}) to:`, toRecipients);
 
-    const result = await resend.emails.send({
+    let result = await resend.emails.send({
       from: fromEmail,
       to: toRecipients,
       subject,
       html: htmlBody,
     });
+
+    // If Resend returns an unverified domain restriction on the free/testing tier, fallback to the account owner email so the alert is not lost
+    if (result.error && result.error.message?.includes("only send testing emails to your own email address")) {
+      console.warn("[Resend] Recipient domain not verified yet in Resend. Falling back to account email:", result.error.message);
+      result = await resend.emails.send({
+        from: fromEmail,
+        to: "bouizem.design@gmail.com",
+        subject: `[Weiterleitung an info@kfz-gutachten-ludwigsburg.de] ` + subject,
+        html: `
+          <div style="background-color: #fef3c7; border: 1px solid #f59e0b; padding: 12px 16px; border-radius: 8px; font-size: 13px; color: #92400e; margin-bottom: 20px;">
+            <strong>⚠️ Resend-Hinweis:</strong> Diese E-Mail ist für <code>info@kfz-gutachten-ludwigsburg.de</code> bestimmt. Da die Domain bei Resend noch nicht per DNS verifiziert wurde, wurde sie temporär an die hinterlegte Account-Adresse zugestellt. Bitte hinterlegen Sie die DNS-Einträge bei Ihrem Domain-Provider, um den direkten Empfang zu aktivieren.
+          </div>
+        ` + htmlBody,
+      });
+    }
 
     if (result.error) {
       console.error("[Resend] Email send error:", result.error);
