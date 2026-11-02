@@ -6,7 +6,16 @@ export async function POST(request: Request) {
     const { caseId, licensePlate, clientName, fileName } = await request.json();
 
     const resendApiKey = process.env.RESEND_API_KEY;
-    const adminEmail = process.env.ADMIN_EMAIL || "bouizem.design@gmail.com";
+    const adminEmailRaw = process.env.ADMIN_EMAIL || "bouizem.design@gmail.com";
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "KFZ-Gutachten System <onboarding@resend.dev>";
+    
+    // Parse one or multiple recipients (separated by comma)
+    const recipients = adminEmailRaw
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
+
+    const toRecipients = recipients.length > 1 ? recipients : (recipients[0] || "bouizem.design@gmail.com");
     
     // Dynamically build host-based URL fallback to ensure links work on production and local dev
     const host = request.headers.get("host") || "app.kfz-gutachten-ludwigsburg.de";
@@ -88,11 +97,11 @@ export async function POST(request: Request) {
       </html>
     `;
 
-    console.log(`[Resend] Dispatching upload alert to: ${adminEmail}`);
+    console.log(`[Resend] Dispatching upload alert to:`, toRecipients);
 
     const result = await resend.emails.send({
-      from: "KFZ-Gutachten System <onboarding@resend.dev>",
-      to: adminEmail,
+      from: fromEmail,
+      to: toRecipients,
       subject,
       html: htmlBody,
     });

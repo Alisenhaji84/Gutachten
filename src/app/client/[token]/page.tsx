@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getCaseByToken, updateCase, uploadFile, getFilesForCase, Case, CaseFile, initDb } from "@/lib/db";
+import { getCaseByToken, updateCase, uploadFile, getFilesForCase, createNotification, sendFormNotification, Case, CaseFile, initDb } from "@/lib/db";
 import confetti from "canvas-confetti";
 import LicensePlate from "@/components/LicensePlate";
 import { 
@@ -85,6 +85,7 @@ export default function ClientPortalPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [signatureSaved, setSignatureSaved] = useState(false);
+  const lastNotifiedPhoneRef = useRef<string>("");
 
   // Client revisits state: if case is already filled, show status and upload additional files
   const [revisitUploadLoading, setRevisitUploadLoading] = useState(false);
@@ -103,9 +104,13 @@ export default function ClientPortalPage() {
         setCaseData(data);
         setLicensePlate(data.license_plate);
         
-        // If client already submitted, load existing data & files
-        if (data.client_email) {
-          setEmail(data.client_email);
+        if (data.client_phone) {
+          lastNotifiedPhoneRef.current = data.client_phone;
+        }
+        
+        // If client already submitted or entered data, load existing data & files
+        if (data.client_email || data.client_phone) {
+          if (data.client_email) setEmail(data.client_email);
           const rawPhone = data.client_phone || "";
           setPhone(rawPhone);
           if (rawPhone) {
@@ -144,8 +149,14 @@ export default function ClientPortalPage() {
               setUnfallkarteOther(data.is_accident_card_present.replace("Andere: ", ""));
             }
           }
-          setSubmitted(true);
-          setIsEditing(false);
+
+          if (data.client_email && data.signature_url) {
+            setSubmitted(true);
+            setIsEditing(false);
+          } else {
+            setSubmitted(false);
+            setIsEditing(true);
+          }
         } else {
           setSubmitted(false);
           setIsEditing(true);
@@ -253,6 +264,88 @@ export default function ClientPortalPage() {
     };
     reader.readAsDataURL(file);
   };
+
+  const handlePhoneBlur = async () => {
+    if (!caseData) return;
+    const digits = localPhone.replace(/[^\d]/g, "");
+    if (digits.length < 5) return;
+    const combinedPhone = countryCode + digits;
+
+    if (combinedPhone === caseData.client_phone && lastNotifiedPhoneRef.current === combinedPhone) {
+      return;
+    }
+
+    try {
+      await updateCase(caseData.id, {
+        client_phone: combinedPhone,
+        client_email: email || caseData.client_email,
+      });
+
+      setCaseData((prev) =>
+        prev
+          ? {
+              ...prev,
+              client_phone: combinedPhone,
+              client_email: email || prev.client_email,
+            }
+          : null
+      );
+
+      if (lastNotifiedPhoneRef.current !== combinedPhone) {
+        lastNotifiedPhoneRef.current = combinedPhone;
+
+        sendFormNotification({
+          type: "phone_added",
+          caseId: caseData.id,
+          licensePlate: licensePlate || caseData.license_plate,
+          clientName: caseData.client_name,
+          clientPhone: combinedPhone,
+          clientEmail: email || caseData.client_email,
+          source: "client_portal",
+        });
+
+        createNotification(
+          caseData.id,
+          licensePlate || caseData.license_plate,
+          `Telefonnummer hinterlegt: ${combinedPhone}`,
+          "Kunde"
+        );
+      }
+    } catch (err) {
+      console.error("Auto-save phone error:", err);
+    }
+  };
+
+  const handleEmailBlur = async () => {
+    if (!caseData) return;
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) return;
+    if (trimmedEmail === caseData.client_email) return;
+
+    try {
+      await updateCase(caseData.id, {
+        client_email: trimmedEmail,
+      });
+      setCaseData((prev) => (prev ? { ...prev, client_email: trimmedEmail } : null));
+    } catch (err) {
+      console.error("Auto-save email error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!caseData || isReadOnly) return;
+    const digits = localPhone.replace(/[^\d]/g, "");
+    if (digits.length < 6) return;
+    const combinedPhone = countryCode + digits;
+
+    if (combinedPhone === lastNotifiedPhoneRef.current) return;
+
+    const timer = setTimeout(() => {
+      handlePhoneBlur();
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [localPhone, countryCode, caseData, isReadOnly]);
 
   // Drag & drop handlers
   const handleFileDrop = (
@@ -390,12 +483,14 @@ export default function ClientPortalPage() {
 
     // Validate Signature
     const canvas = canvasRef.current;
-    if (!canvas || !signatureSaved) {
+    let finalSignatureUrl = caseData.signature_url || "";
+
+    if (signatureSaved && canvas) {
+      finalSignatureUrl = canvas.toDataURL("image/png");
+    } else if (!finalSignatureUrl) {
       alert("Bitte unterschreiben Sie das Formular vor dem Senden.");
       return;
     }
-
-    const signatureUrl = canvas.toDataURL("image/png");
 
     const scheckheftText = scheckheftChoice === "Andere" ? `Andere: ${scheckheftOther}` : scheckheftChoice;
     const unfallkarteText = unfallkarteChoice === "Andere" ? `Andere: ${unfallkarteOther}` : unfallkarteChoice;
@@ -403,6 +498,7 @@ export default function ClientPortalPage() {
     try {
       const combinedPhone = countryCode + localPhone.replace(/[^\d]/g, "");
       setPhone(combinedPhone);
+      lastNotifiedPhoneRef.current = combinedPhone;
 
       // Update Case Details
       await updateCase(caseData.id, {
@@ -417,21 +513,58 @@ export default function ClientPortalPage() {
         opponent_insurance_number: opponentInsuranceNumber,
         is_scheckheft_maintained: scheckheftText,
         is_accident_card_present: unfallkarteText,
-        signature_url: signatureUrl,
+        signature_url: finalSignatureUrl,
         iban: iban,
         opposing_insurance_contacted: opposingInsuranceContacted,
       });
 
       // Upload files
+      let uploadedFilesCount = 0;
       if (scheckheftFile) {
         await uploadFile(caseData.id, "scheckheft", scheckheftFile.name, scheckheftFile.base64, "client");
+        uploadedFilesCount++;
       }
       if (unfallkarteFile) {
         await uploadFile(caseData.id, "accident_card", unfallkarteFile.name, unfallkarteFile.base64, "client");
+        uploadedFilesCount++;
       }
       for (const photo of accidentPhotos) {
         await uploadFile(caseData.id, "accident_photos", photo.name, photo.base64, "client");
+        uploadedFilesCount++;
       }
+
+      // Send form alert email
+      const isUpdate = submitted || (caseData.client_email && caseData.signature_url);
+      sendFormNotification({
+        type: isUpdate ? "info_updated" : "form_submitted",
+        caseId: caseData.id,
+        licensePlate: licensePlate.toUpperCase().trim(),
+        clientName: caseData.client_name,
+        clientPhone: combinedPhone,
+        clientEmail: email,
+        details: {
+          opponentLicensePlate: opponentPlate.toUpperCase().trim(),
+          accidentLocation,
+          accidentDate,
+          damageNumber,
+          opponentInsuranceName,
+          opponentInsuranceNumber,
+          iban,
+          opposingInsuranceContacted,
+          isScheckheftMaintained: scheckheftText,
+          isAccidentCardPresent: unfallkarteText,
+          hasSignature: !!finalSignatureUrl,
+          filesCount: uploadedFilesCount,
+        },
+        source: "client_portal",
+      });
+
+      createNotification(
+        caseData.id,
+        licensePlate.toUpperCase().trim(),
+        isUpdate ? "Angaben über Kundenportal aktualisiert" : "Schadenformular vollständig eingereicht",
+        "Kunde"
+      );
 
       // Success Confetti
       confetti({
@@ -795,6 +928,7 @@ export default function ClientPortalPage() {
                     placeholder="Beispiel@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onBlur={handleEmailBlur}
                     className="w-full border-b border-slate-200 focus:border-sky-500 py-2 outline-none text-slate-800 transition-colors placeholder:text-slate-300"
                   />
                 </div>
@@ -825,6 +959,7 @@ export default function ClientPortalPage() {
                       placeholder="170 1234567"
                       value={localPhone}
                       onChange={(e) => setLocalPhone(e.target.value)}
+                      onBlur={handlePhoneBlur}
                       className="flex-1 border-b border-slate-200 focus:border-sky-500 py-2 outline-none text-slate-800 transition-colors placeholder:text-slate-300 font-semibold"
                     />
                   </div>
@@ -1294,27 +1429,51 @@ export default function ClientPortalPage() {
                     Unterschreiben Sie ihr Formular digital mit Maus, Stift oder Finger.
                   </p>
                   
-                  <div className="signature-canvas-container relative w-full h-44 overflow-hidden border border-slate-200 rounded-2xl bg-white shadow-inner">
-                    <canvas
-                      ref={canvasRef}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                      className="absolute inset-0 w-full h-full cursor-crosshair"
-                    />
-                    
-                    <button
-                      type="button"
-                      onClick={clearCanvas}
-                      className="absolute bottom-3 right-3 text-xs bg-slate-100 hover:bg-red-50 border border-slate-200 text-slate-500 hover:text-red-600 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer select-none"
-                    >
-                      Löschen
-                    </button>
-                  </div>
+                  {caseData?.signature_url && !signatureSaved ? (
+                    <div className="space-y-2">
+                      <div className="relative w-full h-44 overflow-hidden border border-emerald-200 rounded-2xl bg-slate-50 flex flex-col items-center justify-center p-4">
+                        <img src={caseData.signature_url} alt="Bestehende Unterschrift" className="max-h-28 object-contain" />
+                        <span className="text-xs text-emerald-700 font-semibold mt-2">✓ Bereits digital unterschrieben</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSignatureSaved(false);
+                          const canvas = canvasRef.current;
+                          if (canvas) {
+                            const ctx = canvas.getContext("2d");
+                            ctx?.clearRect(0, 0, canvas.width, canvas.height);
+                          }
+                          setCaseData((prev) => prev ? { ...prev, signature_url: undefined } : null);
+                        }}
+                        className="text-xs text-sky-600 hover:text-sky-700 underline font-semibold cursor-pointer"
+                      >
+                        Neu unterschreiben
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="signature-canvas-container relative w-full h-44 overflow-hidden border border-slate-200 rounded-2xl bg-white shadow-inner">
+                      <canvas
+                        ref={canvasRef}
+                        onMouseDown={startDrawing}
+                        onMouseMove={draw}
+                        onMouseUp={stopDrawing}
+                        onMouseLeave={stopDrawing}
+                        onTouchStart={startDrawing}
+                        onTouchMove={draw}
+                        onTouchEnd={stopDrawing}
+                        className="absolute inset-0 w-full h-full cursor-crosshair"
+                      />
+                      
+                      <button
+                        type="button"
+                        onClick={clearCanvas}
+                        className="absolute bottom-3 right-3 text-xs bg-slate-100 hover:bg-red-50 border border-slate-200 text-slate-500 hover:text-red-600 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer select-none"
+                      >
+                        Löschen
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

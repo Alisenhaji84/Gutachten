@@ -12,7 +12,9 @@ import {
   CaseFile, 
   User, 
   CaseStatus,
-  archiveCase
+  archiveCase,
+  createNotification,
+  sendFormNotification
 } from "@/lib/db";
 import LicensePlate from "@/components/LicensePlate";
 import { 
@@ -215,6 +217,35 @@ export default function CaseDetailPage() {
         iban: editIban,
         opposing_insurance_contacted: editOpposingInsuranceContacted,
       }, currentUser.role);
+
+      // Trigger notification email
+      sendFormNotification({
+        type: "info_updated",
+        caseId: caseId,
+        licensePlate: editLicensePlate,
+        clientPhone: editClientPhone,
+        clientEmail: editClientEmail,
+        details: {
+          opponentLicensePlate: editOpponentLicensePlate,
+          accidentLocation: editAccidentLocation,
+          accidentDate: editAccidentDate,
+          damageNumber: editDamageNumber,
+          opponentInsuranceName: editOpponentInsuranceName,
+          opponentInsuranceNumber: editOpponentInsuranceNumber,
+          iban: editIban,
+          opposingInsuranceContacted: editOpposingInsuranceContacted,
+          isScheckheftMaintained: editIsScheckheftMaintained,
+          isAccidentCardPresent: editIsAccidentCardPresent,
+        },
+        source: currentUser.role === "assistant" ? `Mitarbeiter (${currentUser.name})` : "Dashboard",
+      });
+
+      createNotification(
+        caseId,
+        editLicensePlate,
+        `Falldaten aktualisiert durch ${currentUser.name || currentUser.role}`,
+        currentUser.name || currentUser.role
+      );
 
       setSuccessMsg("Kunden- und Unfalldetails erfolgreich aktualisiert!");
       setTimeout(() => setSuccessMsg(""), 3000);

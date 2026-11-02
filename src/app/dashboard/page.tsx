@@ -294,9 +294,11 @@ export default function DashboardPage() {
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-slate-500 font-medium">Kennzeichen: {n.license_plate}</p>
                             <p className="text-xs text-slate-800 font-semibold truncate mt-0.5">
-                              {n.uploaded_by} hat eine Datei hochgeladen:
+                              {n.file_name.includes(".") && !n.file_name.includes(" ")
+                                ? `${n.uploaded_by} hat eine Datei hochgeladen:`
+                                : `${n.uploaded_by}:`}
                             </p>
-                            <p className="text-xs text-slate-600 truncate mt-0.5 font-mono">{n.file_name}</p>
+                            <p className="text-xs text-slate-600 truncate mt-0.5 font-medium">{n.file_name}</p>
                             <p className="text-[10px] text-slate-400 mt-1">
                               {new Date(n.created_at).toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})} Uhr
                             </p>

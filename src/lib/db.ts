@@ -541,6 +541,50 @@ export async function markNotificationsAsRead(): Promise<void> {
   }
 }
 
+export async function createNotification(
+  caseId: string,
+  licensePlate: string,
+  fileNameOrMessage: string,
+  uploadedBy: string
+): Promise<void> {
+  const { error } = await supabase.from("notifications").insert({
+    case_id: caseId,
+    license_plate: licensePlate,
+    file_name: fileNameOrMessage,
+    uploaded_by: uploadedBy,
+  });
+
+  if (error) {
+    console.error("Fehler beim Erstellen der Benachrichtigung:", error.message);
+  }
+}
+
+export async function sendFormNotification(payload: {
+  type: "form_submitted" | "phone_added" | "info_updated";
+  caseId: string;
+  licensePlate: string;
+  clientName?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  details?: Record<string, any>;
+  source?: string;
+}): Promise<void> {
+  if (!isBrowser()) return;
+  try {
+    const res = await fetch("/api/send-form-alert", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.warn("sendFormNotification returned error:", errData);
+    }
+  } catch (err) {
+    console.error("Fehler beim Senden der Formular-Benachrichtigung:", err);
+  }
+}
+
 export async function deleteCase(caseId: string): Promise<void> {
   // 1. List files under cases/caseId/ in storage
   const { data: list, error: listError } = await supabase.storage
