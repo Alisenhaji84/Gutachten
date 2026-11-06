@@ -5,7 +5,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
-      type, // "form_submitted" | "phone_added" | "info_updated"
+      type, // "form_submitted" | "phone_added" | "info_updated" | "case_created" | "status_changed"
       caseId,
       licensePlate,
       clientName,
@@ -13,6 +13,8 @@ export async function POST(request: Request) {
       clientEmail,
       details = {},
       source, // "client_portal" | "dashboard" | assistant name
+      performerName,
+      performerRole,
     } = body;
 
     const resendApiKey = process.env.RESEND_API_KEY;
@@ -57,38 +59,77 @@ export async function POST(request: Request) {
 
     const plateText = licensePlate || "UNBEKANNT";
 
+    let performerLabel = "Kunde";
+    if (performerName) {
+      performerLabel = performerRole ? `${performerName} (${performerRole})` : performerName;
+    } else if (source && source !== "client_portal") {
+      performerLabel = source;
+    } else if (source === "client_portal" || type === "form_submitted" || type === "phone_added") {
+      performerLabel = "Kunde (über Kundenportal)";
+    }
+
     let subject = "";
     let badgeText = "";
     let badgeBg = "#0284c7";
     let heading = "";
     let introText = "";
 
-    if (type === "phone_added") {
+    if (type === "case_created") {
+      subject = `✨ Neuer Fall angelegt: ${plateText} (durch ${performerLabel})`;
+      badgeText = "Fall angelegt";
+      badgeBg = "#8b5cf6"; // Violet
+      heading = "Neuer Fall angelegt";
+      introText = `<strong>${performerLabel}</strong> hat einen neuen Schadensfall für das Kennzeichen <strong>${plateText}</strong> angelegt.`;
+    } else if (type === "status_changed") {
+      const statusInfo = details.newStatus ? ` → ${details.newStatus}` : "";
+      subject = `🔄 Status geändert: ${plateText}${statusInfo} (durch ${performerLabel})`;
+      badgeText = details.newStatus ? `Status: ${details.newStatus}` : "Status geändert";
+      badgeBg = "#f59e0b"; // Amber
+      heading = "Status / Fallverwaltung aktualisiert";
+      introText = `<strong>${performerLabel}</strong> hat den Fall für das Kennzeichen <strong>${plateText}</strong> aktualisiert.`;
+    } else if (type === "phone_added") {
       subject = `📞 Telefonnummer hinterlegt: ${plateText} - ${clientPhone || "Keine Nummer"}`;
       badgeText = "Telefonnummer hinterlegt";
       badgeBg = "#10b981"; // Emerald
       heading = "Neue Telefonnummer hinterlegt";
       introText = `Ein Kunde hat eine Telefonnummer für den Fall mit dem Kennzeichen <strong>${plateText}</strong> hinterlegt.`;
     } else if (type === "info_updated") {
-      subject = `✏️ Angaben aktualisiert: ${plateText} ${clientPhone ? `(${clientPhone})` : ""}`;
-      badgeText = "Angaben aktualisiert";
+      subject = `✏️ Falldaten geändert: ${plateText} (durch ${performerLabel})`;
+      badgeText = "Daten aktualisiert";
       badgeBg = "#f59e0b"; // Amber
       heading = "Falldaten wurden aktualisiert";
-      const sourceLabel = source === "client_portal" ? "über das Kundenportal" : source ? `durch ${source}` : "im System";
-      introText = `Die Angaben für den Fall mit dem Kennzeichen <strong>${plateText}</strong> wurden ${sourceLabel} aktualisiert.`;
+      introText = `<strong>${performerLabel}</strong> hat die Daten für den Fall mit dem Kennzeichen <strong>${plateText}</strong> aktualisiert.`;
     } else {
       // default: form_submitted
-      subject = `📝 Schadenformular eingereicht: ${plateText} - ${clientPhone || clientEmail || clientName || "Kunde"}`;
+      subject = `📝 Schadenformular eingereicht: ${plateText} (durch Kunde)`;
       badgeText = "Schadenmeldung eingereicht";
       badgeBg = "#0284c7"; // Sky Blue
       heading = "Neues Schadenformular eingereicht";
-      introText = `Ein Kunde hat das Schadensformular für das Kennzeichen <strong>${plateText}</strong> ausgefüllt und eingereicht.`;
+      introText = `Ein Kunde hat das Schadensformular für das Kennzeichen <strong>${plateText}</strong> vollständig ausgefüllt und eingereicht.`;
     }
 
     // Build table rows
     const rows: { label: string; value: string; isLink?: boolean; linkType?: "tel" | "mailto" }[] = [
+      { label: "Ausgeführt von", value: performerLabel },
       { label: "Kennzeichen", value: plateText },
     ];
+
+    if (details.previousStatus && details.newStatus) {
+      rows.push({ label: "Statusänderung", value: `${details.previousStatus} ➔ ${details.newStatus}` });
+    } else if (details.newStatus) {
+      rows.push({ label: "Neuer Status", value: details.newStatus });
+    }
+
+    if (details.assignedAssistantName) {
+      rows.push({ label: "Zugewiesener Mitarbeiter", value: details.assignedAssistantName });
+    }
+
+    if (details.assistantPayout !== undefined && details.assistantPayout !== null && details.assistantPayout > 0) {
+      rows.push({
+        label: "Mitarbeiter-Vergütung",
+        value: `${details.assistantPayout} € ${details.assistantPayoutPaid ? "(Bereits bezahlt)" : "(Ausstehend)"}`,
+      });
+    }
 
     if (clientPhone) {
       rows.push({ label: "Telefonnummer", value: clientPhone, isLink: true, linkType: "tel" });

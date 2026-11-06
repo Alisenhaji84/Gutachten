@@ -3,7 +3,7 @@ import { Resend } from "resend";
 
 export async function POST(request: Request) {
   try {
-    const { caseId, licensePlate, clientName, fileName } = await request.json();
+    const { caseId, licensePlate, clientName, fileName, uploadedBy } = await request.json();
 
     const resendApiKey = process.env.RESEND_API_KEY;
     const adminEmailRaw = process.env.ADMIN_EMAIL || "info@kfz-gutachten-ludwigsburg.de";
@@ -44,7 +44,12 @@ export async function POST(request: Request) {
       second: "2-digit",
     }) + " Uhr";
 
-    const subject = `Neue Datei hochgeladen: ${licensePlate} - ${clientName || "Kunde"}`;
+    let uploaderLabel = "Kunde (über Kundenportal)";
+    if (uploadedBy && uploadedBy !== "client") {
+      uploaderLabel = uploadedBy;
+    }
+
+    const subject = `📁 Neue Datei hochgeladen: ${licensePlate} (durch ${uploaderLabel})`;
 
     const htmlBody = `
       <!DOCTYPE html>
@@ -59,20 +64,30 @@ export async function POST(request: Request) {
             <h2 style="margin: 0; color: #ffffff; font-size: 20px; font-weight: 700;">KFZ-Gutachten System</h2>
           </div>
           <div style="padding: 32px 24px;">
-            <h3 style="margin-top: 0; margin-bottom: 20px; color: #0f172a; font-size: 18px; font-weight: 600;">Neue Datei im Kundenportal hochgeladen</h3>
+            <div style="margin-bottom: 16px;">
+              <span style="display: inline-block; background-color: #0284c7; color: #ffffff; padding: 5px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase;">
+                Datei-Upload
+              </span>
+            </div>
+            <h3 style="margin-top: 0; margin-bottom: 12px; color: #0f172a; font-size: 18px; font-weight: 600;">Neue Datei hochgeladen</h3>
             <p style="margin-bottom: 24px; font-size: 14px; line-height: 1.5; color: #475569;">
-              Ein Kunde hat ein neues Dokument im Portal eingereicht. Unten finden Sie die Details:
+              <strong>${uploaderLabel}</strong> hat eine neue Datei für das Fahrzeug <strong>${licensePlate}</strong> hinterlegt.
             </p>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 32px; font-size: 14px;">
               <tbody>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 12px 0; font-weight: 600; color: #64748b; width: 140px;">Kennzeichen</td>
-                  <td style="padding: 12px 0; font-weight: 700; color: #0f172a;">${licensePlate}</td>
+                  <td style="padding: 12px 0; font-weight: 600; color: #64748b; width: 150px;">Hochgeladen von</td>
+                  <td style="padding: 12px 0; font-weight: 700; color: #0284c7;">${uploaderLabel}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 12px 0; font-weight: 600; color: #64748b;">Kunde</td>
-                  <td style="padding: 12px 0; color: #0f172a;">${clientName || "Unbekannter Kunde"}</td>
+                  <td style="padding: 12px 0; font-weight: 600; color: #64748b;">Kennzeichen</td>
+                  <td style="padding: 12px 0; font-weight: 700; color: #0f172a;">${licensePlate}</td>
                 </tr>
+                ${clientName ? `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 12px 0; font-weight: 600; color: #64748b;">Kunde</td>
+                  <td style="padding: 12px 0; color: #0f172a;">${clientName}</td>
+                </tr>` : ""}
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 12px 0; font-weight: 600; color: #64748b;">Dateiname</td>
                   <td style="padding: 12px 0; font-family: monospace; color: #0f172a;">${fileName}</td>

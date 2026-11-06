@@ -486,6 +486,7 @@ export async function uploadFile(
           licensePlate,
           clientName,
           fileName,
+          uploadedBy,
         }),
       }).catch((emailErr) => {
         console.error("Fehler beim Senden der E-Mail-Benachrichtigung über Resend:", emailErr);
@@ -560,7 +561,7 @@ export async function createNotification(
 }
 
 export async function sendFormNotification(payload: {
-  type: "form_submitted" | "phone_added" | "info_updated";
+  type: "form_submitted" | "phone_added" | "info_updated" | "case_created" | "status_changed";
   caseId: string;
   licensePlate: string;
   clientName?: string;
@@ -568,6 +569,8 @@ export async function sendFormNotification(payload: {
   clientEmail?: string;
   details?: Record<string, any>;
   source?: string;
+  performerName?: string;
+  performerRole?: string;
 }): Promise<void> {
   if (!isBrowser()) return;
   try {

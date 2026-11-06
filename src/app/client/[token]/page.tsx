@@ -302,6 +302,8 @@ export default function ClientPortalPage() {
           clientPhone: combinedPhone,
           clientEmail: email || caseData.client_email,
           source: "client_portal",
+          performerName: "Kunde",
+          performerRole: "Kundenportal",
         });
 
         createNotification(
@@ -557,6 +559,8 @@ export default function ClientPortalPage() {
           filesCount: uploadedFilesCount,
         },
         source: "client_portal",
+        performerName: "Kunde",
+        performerRole: "Kundenportal",
       });
 
       createNotification(

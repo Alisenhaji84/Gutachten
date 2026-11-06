@@ -14,7 +14,9 @@ import {
   markNotificationsAsRead,
   Notification,
   deleteCase,
-  archiveCase
+  archiveCase,
+  createNotification,
+  sendFormNotification
 } from "@/lib/db";
 import QRCode from "qrcode";
 import LicensePlate from "@/components/LicensePlate";
@@ -153,6 +155,30 @@ export default function DashboardPage() {
       
       setQrCodeUrl(qrDataUrl);
       setCreatedCase(newCase);
+
+      // Trigger email alert & in-app notification with performer attribution
+      const performerName = currentUser?.name || "Mitarbeiter";
+      const performerRole = currentUser?.role === "admin" ? "Administrator" : "Mitarbeiter";
+      const assignedAssistant = assistants.find((a) => a.id === assistantId);
+
+      sendFormNotification({
+        type: "case_created",
+        caseId: newCase.id,
+        licensePlate: newCase.license_plate,
+        details: {
+          assignedAssistantName: assignedAssistant?.name || (currentUser?.role === "admin" ? currentUser.name : "Nicht zugewiesen"),
+        },
+        source: `${performerName} (${performerRole})`,
+        performerName,
+        performerRole,
+      });
+
+      createNotification(
+        newCase.id,
+        newCase.license_plate,
+        "Neuer Fall angelegt",
+        `${performerName} (${performerRole})`
+      );
       
       // Refresh case list
       if (currentUser) {

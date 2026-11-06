@@ -186,6 +186,36 @@ export default function CaseDetailPage() {
 
       setSuccessMsg("Änderungen erfolgreich gespeichert!");
       setTimeout(() => setSuccessMsg(""), 3000);
+
+      // Trigger notification email & in-app notification with actor attribution
+      const performerName = currentUser.name || "Administrator";
+      const performerRole = currentUser.role === "admin" ? "Administrator" : "Mitarbeiter";
+      const assignedAssistant = assistants.find((a) => a.id === selectedAssistantId);
+      const statusChanged = caseData?.status !== selectedStatus;
+      const statusText = statusChanged ? `Status geändert auf "${selectedStatus}"` : "Fallverwaltung aktualisiert";
+
+      sendFormNotification({
+        type: "status_changed",
+        caseId,
+        licensePlate: caseData?.license_plate || "",
+        details: {
+          previousStatus: caseData?.status,
+          newStatus: selectedStatus,
+          assignedAssistantName: assignedAssistant?.name || (selectedAssistantId ? "Zugewiesen" : "Nicht zugewiesen"),
+          assistantPayout: parseFloat(assistantPayout) || 0,
+          assistantPayoutPaid,
+        },
+        source: `${performerName} (${performerRole})`,
+        performerName,
+        performerRole,
+      });
+
+      createNotification(
+        caseId,
+        caseData?.license_plate || "",
+        statusText,
+        `${performerName} (${performerRole})`
+      );
       
       // Refresh details silently (avoids full-page loading flicker)
       fetchCaseDetails(currentUser, true);
@@ -218,7 +248,10 @@ export default function CaseDetailPage() {
         opposing_insurance_contacted: editOpposingInsuranceContacted,
       }, currentUser.role);
 
-      // Trigger notification email
+      // Trigger notification email & in-app notification with actor attribution
+      const performerName = currentUser.name || (currentUser.role === "admin" ? "Administrator" : "Mitarbeiter");
+      const performerRole = currentUser.role === "admin" ? "Administrator" : "Mitarbeiter";
+
       sendFormNotification({
         type: "info_updated",
         caseId: caseId,
@@ -237,14 +270,16 @@ export default function CaseDetailPage() {
           isScheckheftMaintained: editIsScheckheftMaintained,
           isAccidentCardPresent: editIsAccidentCardPresent,
         },
-        source: currentUser.role === "assistant" ? `Mitarbeiter (${currentUser.name})` : "Dashboard",
+        source: `${performerName} (${performerRole})`,
+        performerName,
+        performerRole,
       });
 
       createNotification(
         caseId,
         editLicensePlate,
-        `Falldaten aktualisiert durch ${currentUser.name || currentUser.role}`,
-        currentUser.name || currentUser.role
+        "Falldaten aktualisiert",
+        `${performerName} (${performerRole})`
       );
 
       setSuccessMsg("Kunden- und Unfalldetails erfolgreich aktualisiert!");
@@ -353,13 +388,19 @@ export default function CaseDetailPage() {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const base64 = event.target?.result as string;
+      const performerLabel = currentUser.name
+        ? `${currentUser.name} (${currentUser.role === "admin" ? "Administrator" : "Mitarbeiter"})`
+        : currentUser.role === "admin"
+        ? "Administrator"
+        : "Mitarbeiter";
+
       try {
         await uploadFile(
           caseId,
           uploadType,
           file.name,
           base64,
-          currentUser.role
+          performerLabel
         );
         // Refresh files
         const list = await getFilesForCase(caseId);
