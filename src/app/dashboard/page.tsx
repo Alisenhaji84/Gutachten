@@ -101,8 +101,12 @@ export default function DashboardPage() {
     const users = await getUsers();
     setAllUsers(users);
 
-    const notifs = await getNotifications();
-    setNotifications(notifs);
+    if (user.role === "admin") {
+      const notifs = await getNotifications();
+      setNotifications(notifs);
+    } else {
+      setNotifications([]);
+    }
   };
 
   const handleLogout = () => {
@@ -206,6 +210,7 @@ export default function DashboardPage() {
   };
 
   const handleMarkNotificationsRead = async () => {
+    if (currentUser?.role !== "admin") return;
     await markNotificationsAsRead();
     if (currentUser) {
       const notifs = await getNotifications();
@@ -270,72 +275,74 @@ export default function DashboardPage() {
               </button>
             )}
 
-            {/* Notification Bell Dropdown */}
-            <div className="relative" ref={notifRef}>
-              <button 
-                onClick={() => {
-                  setShowNotifications(!showNotifications);
-                  if (!showNotifications) handleMarkNotificationsRead();
-                }}
-                className="p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700/80 rounded-xl transition-all relative cursor-pointer"
-              >
-                <Bell className="w-5 h-5" />
-                {notifications.some(n => !n.is_read) && (
-                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
-                )}
-              </button>
+            {/* Notification Bell Dropdown (Admin Only) */}
+            {currentUser.role === "admin" && (
+              <div className="relative" ref={notifRef}>
+                <button 
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    if (!showNotifications) handleMarkNotificationsRead();
+                  }}
+                  className="p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700/80 rounded-xl transition-all relative cursor-pointer"
+                >
+                  <Bell className="w-5 h-5" />
+                  {notifications.some(n => !n.is_read) && (
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                  )}
+                </button>
 
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white text-slate-800 rounded-xl shadow-xl border border-slate-100 py-2 z-40 overflow-hidden transform origin-top-right transition-all">
-                  <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                    <span className="font-semibold text-sm">Aktivitäten & Uploads</span>
-                    {notifications.length > 0 && (
-                      <button 
-                        onClick={async () => {
-                          localStorage.setItem("kfz_notifications", JSON.stringify([]));
-                          setNotifications([]);
-                        }}
-                        className="text-xs text-red-500 hover:text-red-700 hover:underline cursor-pointer"
-                      >
-                        Löschen
-                      </button>
-                    )}
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="px-4 py-6 text-center text-slate-400 text-sm">
-                        Keine neuen Benachrichtigungen
-                      </div>
-                    ) : (
-                      notifications.map(n => (
-                        <button
-                          key={n.id}
-                          onClick={() => {
-                            setShowNotifications(false);
-                            router.push(`/dashboard/case/${n.case_id}`);
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white text-slate-800 rounded-xl shadow-xl border border-slate-100 py-2 z-40 overflow-hidden transform origin-top-right transition-all">
+                    <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+                      <span className="font-semibold text-sm">Aktivitäten & Uploads</span>
+                      {notifications.length > 0 && (
+                        <button 
+                          onClick={async () => {
+                            localStorage.setItem("kfz_notifications", JSON.stringify([]));
+                            setNotifications([]);
                           }}
-                          className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 flex items-start gap-3 transition-colors cursor-pointer"
+                          className="text-xs text-red-500 hover:text-red-700 hover:underline cursor-pointer"
                         >
-                          <div className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500 font-medium">Kennzeichen: {n.license_plate}</p>
-                            <p className="text-xs text-slate-800 font-semibold truncate mt-0.5">
-                              {n.file_name.includes(".") && !n.file_name.includes(" ")
-                                ? `${n.uploaded_by} hat eine Datei hochgeladen:`
-                                : `${n.uploaded_by}:`}
-                            </p>
-                            <p className="text-xs text-slate-600 truncate mt-0.5 font-medium">{n.file_name}</p>
-                            <p className="text-[10px] text-slate-400 mt-1">
-                              {new Date(n.created_at).toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})} Uhr
-                            </p>
-                          </div>
+                          Löschen
                         </button>
-                      ))
-                    )}
+                      )}
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-slate-400 text-sm">
+                          Keine neuen Benachrichtigungen
+                        </div>
+                      ) : (
+                        notifications.map(n => (
+                          <button
+                            key={n.id}
+                            onClick={() => {
+                              setShowNotifications(false);
+                              router.push(`/dashboard/case/${n.case_id}`);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 flex items-start gap-3 transition-colors cursor-pointer"
+                          >
+                            <div className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-500 font-medium">Kennzeichen: {n.license_plate}</p>
+                              <p className="text-xs text-slate-800 font-semibold truncate mt-0.5">
+                                {n.file_name.includes(".") && !n.file_name.includes(" ")
+                                  ? `${n.uploaded_by} hat eine Datei hochgeladen:`
+                                  : `${n.uploaded_by}:`}
+                              </p>
+                              <p className="text-xs text-slate-600 truncate mt-0.5 font-medium">{n.file_name}</p>
+                              <p className="text-[10px] text-slate-400 mt-1">
+                                {new Date(n.created_at).toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})} Uhr
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Profile and Logout */}
             <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
