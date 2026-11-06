@@ -1,28 +1,29 @@
-import { NextResponse } from "next/server";
+import { validateApiKey, handleOptions, jsonResponse } from "@/lib/apiAuth";
 import { supabase } from "@/lib/supabaseClient";
+
+export const dynamic = "force-dynamic";
+
+export const OPTIONS = handleOptions;
 
 export async function GET(
   request: Request,
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 1. Authenticate API Key
+    const auth = validateApiKey(request);
+    if (!auth.authorized) {
+      return auth.response!;
+    }
+
     const params = await props.params;
     const rawIdentifier = decodeURIComponent(params.id).trim();
 
-    // Optional API key validation
-    const apiSecretKey = process.env.API_SECRET_KEY;
-    if (apiSecretKey) {
-      const apiKeyHeader = request.headers.get("x-api-key") || request.headers.get("authorization")?.replace("Bearer ", "");
-      if (apiKeyHeader !== apiSecretKey) {
-        return NextResponse.json({ error: "Unauthorized: Invalid or missing API Key" }, { status: 401 });
-      }
-    }
-
-    const host = request.headers.get("host") || "localhost:3000";
+    const host = request.headers.get("host") || "app.kfz-gutachten-ludwigsburg.de";
     const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
     const baseUrl = `${protocol}://${host}`;
 
-    // 1. Try finding by UUID
+    // 2. Try finding by UUID
     let caseObj: any = null;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawIdentifier);
 
@@ -38,7 +39,7 @@ export async function GET(
       }
     }
 
-    // 2. If not found by UUID, try finding by License Plate (case-insensitive)
+    // 3. If not found by UUID, try finding by License Plate (case-insensitive)
     if (!caseObj) {
       const { data, error } = await supabase
         .from("cases")
@@ -51,7 +52,7 @@ export async function GET(
       }
     }
 
-    // 3. If still not found, try stripped license plate (without spaces/dashes)
+    // 4. If still not found, try stripped license plate (without spaces/dashes)
     if (!caseObj) {
       const cleanPlate = rawIdentifier.replace(/[\s-]/g, "").toUpperCase();
       const { data: allCases } = await supabase.from("cases").select("*");
@@ -63,20 +64,23 @@ export async function GET(
     }
 
     if (!caseObj) {
-      return NextResponse.json(
-        { error: `Fall mit Kennzeichen oder ID "${rawIdentifier}" wurde nicht gefunden.` },
-        { status: 404 }
+      return jsonResponse(
+        {
+          error: "Not Found",
+          message: `Fall mit Kennzeichen oder ID "${rawIdentifier}" wurde nicht gefunden.`,
+        },
+        404
       );
     }
 
-    // 4. Fetch all attached files for this case
+    // 5. Fetch all attached files for this case
     const { data: caseFiles } = await supabase
       .from("case_files")
       .select("*")
       .eq("case_id", caseObj.id)
       .order("created_at", { ascending: true });
 
-    // 5. Fetch assigned assistant details if any
+    // 6. Fetch assigned assistant details if any
     let assistantInfo: any = null;
     if (caseObj.assistant_id) {
       const { data: profile } = await supabase
@@ -96,7 +100,7 @@ export async function GET(
       }
     }
 
-    // 6. Format complete structured read-only response
+    // 7. Format complete structured read-only response
     const formattedResponse = {
       id: caseObj.id,
       license_plate: caseObj.license_plate,
@@ -141,9 +145,9 @@ export async function GET(
       },
     };
 
-    return NextResponse.json(formattedResponse);
+    return jsonResponse(formattedResponse);
   } catch (err: any) {
     console.error("[API v1 /cases/[id]] Execution failed:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return jsonResponse({ error: err.message }, 500);
   }
 }

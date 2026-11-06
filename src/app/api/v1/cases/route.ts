@@ -1,15 +1,16 @@
-import { NextResponse } from "next/server";
+import { validateApiKey, handleOptions, jsonResponse } from "@/lib/apiAuth";
 import { supabase } from "@/lib/supabaseClient";
+
+export const dynamic = "force-dynamic";
+
+export const OPTIONS = handleOptions;
 
 export async function GET(request: Request) {
   try {
-    // Optional API key validation
-    const apiSecretKey = process.env.API_SECRET_KEY;
-    if (apiSecretKey) {
-      const apiKeyHeader = request.headers.get("x-api-key") || request.headers.get("authorization")?.replace("Bearer ", "");
-      if (apiKeyHeader !== apiSecretKey) {
-        return NextResponse.json({ error: "Unauthorized: Invalid or missing API Key" }, { status: 401 });
-      }
+    // 1. Authenticate API Key
+    const auth = validateApiKey(request);
+    if (!auth.authorized) {
+      return auth.response!;
     }
 
     const { searchParams } = new URL(request.url);
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
     const status = searchParams.get("status")?.trim();
     const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "50", 10), 1), 200);
 
-    const host = request.headers.get("host") || "localhost:3000";
+    const host = request.headers.get("host") || "app.kfz-gutachten-ludwigsburg.de";
     const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
     const baseUrl = `${protocol}://${host}`;
 
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error("[API v1 /cases] Error fetching cases:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonResponse({ error: error.message }, 500);
     }
 
     let filtered = cases || [];
@@ -72,12 +73,12 @@ export async function GET(request: Request) {
       updated_at: c.updated_at,
     }));
 
-    return NextResponse.json({
+    return jsonResponse({
       total: results.length,
       cases: results,
     });
   } catch (err: any) {
     console.error("[API v1 /cases] Execution failed:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return jsonResponse({ error: err.message }, 500);
   }
 }

@@ -1,64 +1,136 @@
-# KFZ-Gutachten Local MCP Server & Read-Only API
+# KFZ-Gutachten Ludwigsburg — Enterprise Read-Only API & MCP Server
 
-Lokaler **Read-Only Model Context Protocol (MCP)** Server und REST-API, um Falldaten, Fotos, Versicherungs- und Kundendaten sicher an externe KI-Agenten oder Software zu übergeben.
-
----
-
-## 1. Lokale REST API Endpunkte
-
-Wenn Ihre Next.js App lokal läuft (`npm run dev` auf `http://localhost:3000`):
-
-| Endpunkt | Methode | Beschreibung |
-| :--- | :--- | :--- |
-| `http://localhost:3000/api/v1/cases` | `GET` | Listet alle Fälle auf. Filterbar mit `?status=Gutachten` oder `?search=HN-AA 123` |
-| `http://localhost:3000/api/v1/cases/:id` | `GET` | Liefert **alle Details** (Kunde, Unfall, Versicherung, alle Foto-URLs, Mitarbeiter) per **Kennzeichen** (z.B. `HN-AA 123`) oder **UUID** |
-| `http://localhost:3000/api/v1/summary` | `GET` | Übersicht & Statistik (Anzahl aktive Fälle, Fälle im Gutachten, beim Anwalt, etc.) |
-
-Jeder Fall liefert direkt einen klickbaren Link für Ihren Browser:
-- `dashboard_url`: `http://localhost:3000/dashboard/case/[id]` *(direkt in Google Chrome öffnen)*
+Enterprise-grade **Read-Only REST API** und **Model Context Protocol (MCP)** Server, konzipiert für:
+- Externe KI-Agenten (Claude Desktop, Cursor, Custom Agents, AutoGen, CrewAI).
+- Externe Software, Webhooks, Portale & Datenabfragen.
+- Den Inhaber / Administrator auf entfernten Laptops in anderen Städten (über sichere HTTPS-Verbindung).
 
 ---
 
-## 2. MCP Server für KI-Agenten (Claude, Cursor, Python, etc.)
+## 1. Zugangsdaten & Konfiguration (Production)
 
-Der MCP Server (`mcp-server/index.mjs`) kommuniziert über den Standard `stdio` JSON-RPC.
+| Parameter | Wert |
+| :--- | :--- |
+| **API Base URL** | `https://app.kfz-gutachten-ludwigsburg.de/api/v1` |
+| **Discovery / Doku** | `https://app.kfz-gutachten-ludwigsburg.de/api/v1` |
+| **Standard API-Schlüssel** | `kfz_live_9f83a4c7e2b106d5` |
+| **Zugriffsebene** | **Read-Only** (reine Abfrage von Fällen, Fotos & Status – keine Schreib- oder Löschrechte) |
+| **CORS** | Vollständig aktiviert (`Access-Control-Allow-Origin: *`) für Browser & Web-Apps |
 
-### Starten über Terminal:
-```bash
-npm run mcp
-# oder:
-node mcp-server/index.mjs
+### Authentifizierung
+Übergeben Sie den API-Schlüssel in einem der beiden Header:
+```http
+Authorization: Bearer kfz_live_9f83a4c7e2b106d5
+```
+oder
+```http
+X-API-Key: kfz_live_9f83a4c7e2b106d5
 ```
 
-### Konfiguration für Claude Desktop / Cursor / externe Agenten:
-Fügen Sie Folgendes in Ihre MCP-Konfigurationsdatei (z.B. `claude_desktop_config.json`):
+---
 
+## 2. REST API Endpunkte
+
+### A. Fall-Liste & Suche (`GET /cases`)
+Listet alle KFZ-Schadensfälle auf.
+- **URL**: `https://app.kfz-gutachten-ludwigsburg.de/api/v1/cases`
+- **Optionale Query-Parameter**:
+  - `search`: Volltextsuche nach Kennzeichen (`HN-RV 312`), Kundenname, Telefonnummer, E-Mail oder Schadennummer.
+  - `status`: Filter nach Status (`Gutachten`, `Rechtsanwalt`, `Abgeschlossen`, `Archiviert` oder `all`).
+  - `limit`: Anzahl der Fälle (Standard: 50, Maximum: 200).
+- **Beispiel curl**:
+```bash
+curl -H "X-API-Key: kfz_live_9f83a4c7e2b106d5" \
+  "https://app.kfz-gutachten-ludwigsburg.de/api/v1/cases?search=HN"
+```
+
+### B. Fall-Details & Fotos (`GET /cases/{id_or_license_plate}`)
+Liefert alle Detaildaten eines Falls per **Kennzeichen** (z.B. `HN-RV 312` oder `HNRV312`) oder per **UUID**.
+- **URL**: `https://app.kfz-gutachten-ludwigsburg.de/api/v1/cases/HN-RV%20312`
+- **Enthält**:
+  - Stammdaten des Kunden (Name, Telefon, E-Mail, IBAN)
+  - Unfalldetails (Ort, Datum, Gegner-Kennzeichen, Schadennummer)
+  - Versicherungsdaten (Gegnerische Versicherung, Schadennummer, Status)
+  - Direkte URLs zu **allen hochgeladenen Schadenfotos & Gutachten-Dokumenten**
+  - Klickbare Links direkt ins Web-Dashboard: `dashboard_url`
+- **Beispiel curl**:
+```bash
+curl -H "X-API-Key: kfz_live_9f83a4c7e2b106d5" \
+  "https://app.kfz-gutachten-ludwigsburg.de/api/v1/cases/HN-RV%20312"
+```
+
+### C. Dashboard & Statistik (`GET /summary`)
+Liefert Kennzahlen des Büros (Anzahl aktiver Fälle, Aufteilung nach Status, neueste 5 Fälle mit Dashboard-Links).
+- **URL**: `https://app.kfz-gutachten-ludwigsburg.de/api/v1/summary`
+- **Beispiel curl**:
+```bash
+curl -H "X-API-Key: kfz_live_9f83a4c7e2b106d5" \
+  "https://app.kfz-gutachten-ludwigsburg.de/api/v1/summary"
+```
+
+---
+
+## 3. Code-Beispiele für externe Software & Agenten
+
+### Python
+```python
+import requests
+
+API_URL = "https://app.kfz-gutachten-ludwigsburg.de/api/v1"
+API_KEY = "kfz_live_9f83a4c7e2b106d5"
+headers = {"X-API-Key": API_KEY}
+
+# 1. Fall nach Kennzeichen suchen
+response = requests.get(f"{API_URL}/cases/HN-RV 312", headers=headers)
+case_data = response.json()
+print("Kunde:", case_data["client"]["name"])
+print("Fotos:", len(case_data["files"]))
+print("Dashboard:", case_data["dashboard_url"])
+
+# 2. Alle offenen Gutachten auflisten
+response = requests.get(f"{API_URL}/cases?status=Gutachten", headers=headers)
+print("Offene Gutachten:", response.json()["total"])
+```
+
+### JavaScript / Node.js
+```javascript
+const API_URL = "https://app.kfz-gutachten-ludwigsburg.de/api/v1";
+const API_KEY = "kfz_live_9f83a4c7e2b106d5";
+
+const res = await fetch(`${API_URL}/cases/HN-RV 312`, {
+  headers: { "X-API-Key": API_KEY }
+});
+const caseDetails = await res.json();
+console.log(caseDetails);
+```
+
+---
+
+## 4. MCP Server Setup (Claude Desktop & Cursor)
+
+Der MCP Server (`mcp-server/index.mjs`) verbindet KI-Agenten über das standardisierte Model Context Protocol (JSON-RPC) mit dem Gutachten-Portal.
+
+### Für den Inhaber / entfernte Laptops:
+Auf dem Laptop des Inhabers muss lediglich `Node.js` installiert sein. Das Skript `index.mjs` greift direkt online über HTTPS auf `https://app.kfz-gutachten-ludwigsburg.de/api/v1` zu.
+
+Konfigurationsbeispiel für `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "kfz-gutachten": {
       "command": "node",
-      "args": [
-        "C:\\Users\\T480\\Desktop\\Disktop files\\Work\\Clients\\Gutachten Admin\\mcp-server\\index.mjs"
-      ]
+      "args": ["/Pfad/zu/mcp-server/index.mjs"],
+      "env": {
+        "API_BASE_URL": "https://app.kfz-gutachten-ludwigsburg.de/api/v1",
+        "API_SECRET_KEY": "kfz_live_9f83a4c7e2b106d5"
+      }
     }
   }
 }
 ```
 
----
-
-## 3. Verfügbare Tools im Agenten
-
-1. **`get_case_details(case_id_or_plate)`**:
-   - Suche nach Kennzeichen (z.B. `"HN-AA 123"`) oder Fall-ID.
-   - Liefert alle Kontaktdaten, Unfallort, Datum, gegnerische Versicherung, Schadennummer, IBAN, Status, alle hochgeladenen Foto-URLs und den `localhost`-Link.
-
-2. **`list_cases(status?, search?, limit?)`**:
-   - Durchsucht und filtert Fälle.
-
-3. **`get_case_files(case_id_or_plate)`**:
-   - Liefert alle hochgeladenen Schadensfotos, Dokumente und Gutachten-Dateien als direkte Links.
-
-4. **`get_dashboard_summary()`**:
-   - Liefert Kennzahlen über offene und erledigte Gutachten.
+### Bereitgestellte Tools im KI-Agenten:
+1. `get_case_details(case_id_or_plate)`: Holt vollständige Fallakte inklusive Kundenkontakt, Unfallgegner, Versicherung und Fotolinks per Kennzeichen oder UUID.
+2. `list_cases(status, search, limit)`: Durchsucht alle Fälle im System.
+3. `get_case_files(case_id_or_plate)`: Liefert alle Schadenfotos und Dokumente als direkte Links.
+4. `get_dashboard_summary()`: Holt Kennzahlen über aktive und abgeschlossene Gutachten.
