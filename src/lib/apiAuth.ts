@@ -14,8 +14,24 @@ export function handleOptions() {
 }
 
 export function validateApiKey(request: Request): { authorized: boolean; response?: NextResponse } {
-  const configuredKey =
-    process.env.API_SECRET_KEY || process.env.KFZ_API_KEY || "kfz_live_9f83a4c7e2b106d5";
+  const configuredKey = process.env.API_SECRET_KEY || process.env.KFZ_API_KEY;
+
+  if (!configuredKey) {
+    console.error("[API Auth] Missing API_SECRET_KEY in environment variables.");
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        {
+          error: "Server Configuration Error",
+          message: "API_SECRET_KEY ist in den Umgebungsvariablen des Servers noch nicht hinterlegt.",
+        },
+        {
+          status: 500,
+          headers: CORS_HEADERS,
+        }
+      ),
+    };
+  }
 
   const authHeader = request.headers.get("authorization");
   const xApiKey = request.headers.get("x-api-key");

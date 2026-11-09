@@ -19,8 +19,8 @@ export async function GET(request: Request) {
       type: "API Key",
       description: "Senden Sie Ihren API-Schlüssel entweder im 'Authorization'-Header oder im 'X-API-Key'-Header.",
       headers: [
-        { header: "Authorization", example: "Bearer kfz_live_..." },
-        { header: "X-API-Key", example: "kfz_live_..." },
+        { header: "Authorization", example: "Bearer <YOUR_API_KEY>" },
+        { header: "X-API-Key", example: "<YOUR_API_KEY>" },
       ],
     },
     endpoints: [

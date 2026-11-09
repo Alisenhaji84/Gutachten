@@ -48,7 +48,7 @@ const API_BASE_URL = (
 const API_SECRET_KEY =
   process.env.API_SECRET_KEY ||
   process.env.KFZ_API_KEY ||
-  "kfz_live_9f83a4c7e2b106d5";
+  "";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
